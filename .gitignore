@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment / secrets
+.env
+**/.env
+.env*.local
+**/.env*.local
+!**/.env.example
+!**/.env.local.example
+
+# Bot runtime data (ticket counter, open tickets)
+bot/data/
+
+# Next.js
+website/.next/
+website/out/
+website/next-env.d.ts
+dashboard/.next/
+dashboard/out/
+dashboard/next-env.d.ts
+
+# Logs & OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

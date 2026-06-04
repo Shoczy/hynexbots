@@ -1,0 +1,77 @@
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Clash Display', sans-serif;
+  --font-sans: 'Satoshi', sans-serif;
+}
+
+@layer base {
+  * {
+    @apply border-ink-700;
+  }
+  body {
+    @apply bg-ink-950 text-mist font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: rgba(99, 102, 241, 0.3);
+    color: #fff;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #08090b;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #23262e;
+    border-radius: 999px;
+    border: 2px solid #08090b;
+  }
+}
+
+@layer components {
+  .container-content {
+    @apply mx-auto w-full max-w-content px-6;
+  }
+  .glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(14px);
+  }
+  .card {
+    @apply rounded-2xl border border-ink-700 bg-ink-900/50;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-ink-700 bg-ink-900/60 px-3.5 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-mist-muted;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-mist px-5 py-2.5 text-sm font-semibold text-ink-950 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_0_40px_-6px_rgba(165,163,255,0.55)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink-600 px-5 py-2.5 text-sm font-semibold text-mist transition-all duration-300 hover:border-mist-faint hover:bg-ink-800;
+  }
+  .input {
+    @apply w-full rounded-xl border border-ink-600 bg-ink-900/70 px-4 py-2.5 text-sm text-mist outline-none transition-colors placeholder:text-mist-faint focus:border-accent/60 focus:ring-2 focus:ring-accent/20;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-mist;
+  }
+  .text-gradient-accent {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(120deg, #a5a3ff 0%, #6366f1 55%, #8b8cf6 100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
