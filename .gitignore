@@ -20,6 +20,7 @@ website/next-env.d.ts
 dashboard/.next/
 dashboard/out/
 dashboard/next-env.d.ts
+*.tsbuildinfo
 
 # Logs & OS
 *.log

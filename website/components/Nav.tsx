@@ -9,6 +9,7 @@ import { brand } from '@/lib/data';
 const links = [
   { href: '#bots', label: 'Bots' },
   { href: '#why', label: 'Why Hynex' },
+  { href: '#hosting', label: 'Hosting' },
   { href: '#process', label: 'Process' },
   { href: '#faq', label: 'FAQ' },
 ];

@@ -10,6 +10,9 @@ const config = require('../config');
 const store = require('../store');
 const { V2, text, sep, container } = require('../lib/components');
 
+// Minimum wait between a user opening tickets, to stop open/close spam.
+const TICKET_COOLDOWN_MS = 60_000;
+
 /** Buttons shown inside an open ticket. */
 function ticketControls() {
   return new ActionRowBuilder().addComponents(
@@ -26,14 +29,31 @@ function ticketControls() {
 async function createTicket(interaction, opts) {
   const { guild, user } = interaction;
 
-  // Prevent duplicate open tickets per user.
   const data = store.read();
+
+  // Prevent duplicate open tickets per user. If the stored channel no longer
+  // exists (e.g. it was deleted manually rather than via Close), self-heal by
+  // dropping the stale entry instead of blocking the user forever.
   const existing = Object.entries(data.tickets).find(([, t]) => t.ownerId === user.id);
   if (existing) {
     const ch = guild.channels.cache.get(existing[0]);
     if (ch) {
       return interaction.reply({ content: `You already have an open ticket: ${ch}`, ephemeral: true });
     }
+    store.update((d) => {
+      delete d.tickets[existing[0]];
+    });
+  }
+
+  // Cooldown: stop a user from rapidly opening/closing tickets.
+  const lastAt = data.cooldowns?.[user.id] || 0;
+  const waited = Date.now() - lastAt;
+  if (waited < TICKET_COOLDOWN_MS) {
+    const secs = Math.ceil((TICKET_COOLDOWN_MS - waited) / 1000);
+    return interaction.reply({
+      content: `Please wait ${secs}s before opening another ticket.`,
+      ephemeral: true,
+    });
   }
 
   const number = (data.ticketCounter || 0) + 1;
@@ -80,6 +100,8 @@ async function createTicket(interaction, opts) {
       createdAt: Date.now(),
       claimedBy: null,
     };
+    d.cooldowns = d.cooldowns || {};
+    d.cooldowns[user.id] = Date.now();
   });
 
   // Build the opening message (Components V2).

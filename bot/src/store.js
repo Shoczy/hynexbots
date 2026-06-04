@@ -12,6 +12,8 @@ const defaults = {
   ticketCounter: 0,
   // channelId -> { ownerId, type, productId, createdAt, claimedBy }
   tickets: {},
+  // userId -> timestamp of their last ticket (open-spam cooldown)
+  cooldowns: {},
 };
 
 function ensure() {

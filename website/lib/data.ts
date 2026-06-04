@@ -4,6 +4,10 @@ export const brand = {
   // Set this to your Discord invite so every CTA points to your ticket panel.
   discordInvite: 'https://discord.gg/your-invite',
   email: 'hello@hynexbots.com',
+  // Public fleet-status endpoint exposed by the bot (bot/src/fleet/server.js).
+  // Override per-environment with NEXT_PUBLIC_FLEET_STATUS_URL.
+  fleetStatusUrl:
+    process.env.NEXT_PUBLIC_FLEET_STATUS_URL || 'http://localhost:8787/public/status',
 };
 
 export type Bot = {
@@ -89,9 +93,61 @@ export const steps = [
 
 export const stats = [
   { value: 400, suffix: '+', label: 'Bots delivered' },
-  { value: 99.9, suffix: '%', label: 'Fleet uptime' },
+  { value: 4.9, suffix: '★', label: 'Avg. rating' },
   { value: 24, suffix: 'h', label: 'Avg. delivery' },
   { value: 180, suffix: '+', label: 'Happy servers' },
+];
+
+// ── Hosting add-on plans ─────────────────────────────
+// Customers can self-host the bot they bought, or let us run it on the fleet.
+export type HostingPlan = {
+  id: string;
+  name: string;
+  price: string;
+  period: string;
+  blurb: string;
+  cta: string;
+  featured?: boolean;
+};
+
+export const hostingPlans: HostingPlan[] = [
+  {
+    id: 'self',
+    name: 'Self-host',
+    price: '$0',
+    period: 'included',
+    blurb: 'Run the bot yourself. You get the delivery and setup help — your server, your control.',
+    cta: 'Included with every bot',
+  },
+  {
+    id: 'managed',
+    name: 'Managed',
+    price: '$9',
+    period: '/ month',
+    blurb: 'We host it 24/7 on our VPS fleet with monitoring and automatic restarts.',
+    cta: 'Add managed hosting',
+    featured: true,
+  },
+  {
+    id: 'priority',
+    name: 'Priority',
+    price: '$19',
+    period: '/ month',
+    blurb: 'Everything in Managed, plus priority support, daily backups and a private status page.',
+    cta: 'Go priority',
+  },
+];
+
+// Feature matrix: each row marks which plans include it (by plan id).
+export const hostingMatrix: { label: string; plans: string[] }[] = [
+  { label: 'Source delivery & setup', plans: ['self', 'managed', 'priority'] },
+  { label: 'Lifetime support', plans: ['self', 'managed', 'priority'] },
+  { label: '24/7 hosting on our fleet', plans: ['managed', 'priority'] },
+  { label: 'Live monitoring & auto-restart', plans: ['managed', 'priority'] },
+  { label: 'Uptime reporting', plans: ['managed', 'priority'] },
+  { label: 'Priority support queue', plans: ['priority'] },
+  { label: 'Daily off-site backups', plans: ['priority'] },
+  { label: 'Private status page', plans: ['priority'] },
 ];
 
 export const faqs = [
