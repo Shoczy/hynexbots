@@ -40,7 +40,10 @@
       "Bash(node -e \"require\\('./src/fleet/server'\\).startFleetServer\\(\\);\")",
       "PowerShell(Get-NetTCPConnection -LocalPort 8787 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; [PSCustomObject]@{ PID=$_.OwningProcess; Name=$p.Name; Path=$p.Path; Started=$p.StartTime } } | Format-List)",
       "Bash(npm start *)",
-      "Bash(npx next *)"
+      "Bash(npx next *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
