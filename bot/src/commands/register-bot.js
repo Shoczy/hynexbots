@@ -126,6 +126,32 @@ module.exports = {
 
     await interaction.reply({ flags: V2_EPHEMERAL, components: [view] });
 
+    // ── Onboarding DM to the customer ──────────────────
+    // Send the new owner their dashboard link + backup key so they can get
+    // started without a staff member relaying anything by hand.
+    if (owner) {
+      try {
+        const u = await interaction.client.users.fetch(owner.id);
+        await u.send(
+          `🎉 **Your ${config.brand.name} bot is ready!**\n\n` +
+            `**${name}** (${typeLabel}) has been set up for you.\n\n` +
+            `**Customize it here:** ${config.dashboardUrl}/dashboard\n` +
+            `Just log in with Discord — your bot is already linked to your account.\n\n` +
+            `**Backup / transfer key** (keep this safe):\n\`\`\`${result.key}\`\`\`\n` +
+            `Use it to re-claim or transfer the bot if you ever need to.`,
+        );
+      } catch {
+        await interaction.followUp({
+          flags: V2_EPHEMERAL,
+          components: [
+            container(config.brand.warning, [
+              text(`### Couldn’t DM the customer\n<@${owner.id}> has DMs closed — share the dashboard link and backup key with them manually.`),
+            ]),
+          ],
+        });
+      }
+    }
+
     // ── Auto-launch when a token was provided ──────────
     if (!token) return;
 

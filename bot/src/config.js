@@ -10,6 +10,9 @@ const config = {
   clientId: process.env.CLIENT_ID,
   guildId: process.env.GUILD_ID,
 
+  // Public URL of the customer dashboard, used in onboarding DMs.
+  dashboardUrl: (process.env.DASHBOARD_URL || 'http://localhost:3000').replace(/\/$/, ''),
+
   tickets: {
     categoryId: process.env.TICKET_CATEGORY_ID || null,
     staffRoleId: process.env.STAFF_ROLE_ID || null,
