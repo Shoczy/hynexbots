@@ -6,7 +6,8 @@ const path = require('path');
  * Persists the ticket counter and a registry of open tickets.
  */
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const FILE = path.join(DATA_DIR, 'store.json');
+// HYNEX_STORE_PATH lets tests point at a throwaway store file.
+const FILE = process.env.HYNEX_STORE_PATH || path.join(DATA_DIR, 'store.json');
 
 const defaults = {
   ticketCounter: 0,
@@ -17,7 +18,8 @@ const defaults = {
 };
 
 function ensure() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  const dir = path.dirname(FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   if (!fs.existsSync(FILE)) fs.writeFileSync(FILE, JSON.stringify(defaults, null, 2));
 }
 

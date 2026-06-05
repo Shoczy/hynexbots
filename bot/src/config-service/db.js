@@ -19,9 +19,12 @@ const { ALL_PERMISSIONS, sanitizePermissions } = require('./permissions');
 const secrets = require('./secrets');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+// HYNEX_DB_PATH lets tests (and alternate deployments) point at a different DB.
+const DB_PATH = process.env.HYNEX_DB_PATH || path.join(DATA_DIR, 'hynex.db');
+const DB_DIR = path.dirname(DB_PATH);
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
-const db = new DatabaseSync(path.join(DATA_DIR, 'hynex.db'));
+const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL;');
 
 /**

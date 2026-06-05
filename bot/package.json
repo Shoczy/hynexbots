@@ -8,7 +8,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "deploy": "node src/deploy-commands.js",
-    "backup": "node src/backup.js"
+    "backup": "node src/backup.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=22.5"
