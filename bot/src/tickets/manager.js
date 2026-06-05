@@ -8,7 +8,7 @@ const {
 } = require('discord.js');
 const config = require('../config');
 const store = require('../store');
-const { V2, text, sep, container } = require('../lib/components');
+const { V2, text, media, sep, container } = require('../lib/components');
 
 // Minimum wait between a user opening tickets, to stop open/close spam.
 const TICKET_COOLDOWN_MS = 60_000;
@@ -97,6 +97,9 @@ async function createTicket(interaction, opts) {
       ownerId: user.id,
       type: opts.type,
       productId: opts.product?.id || null,
+      botName: opts.botName || null,
+      payment: opts.payment || null,
+      avatarUrl: opts.avatarUrl || null,
       createdAt: Date.now(),
       claimedBy: null,
     };
@@ -106,29 +109,38 @@ async function createTicket(interaction, opts) {
 
   // Build the opening message (Components V2).
   const staff = config.tickets.staffRoleId ? ` · <@&${config.tickets.staffRoleId}>` : '';
-  let heading;
-  let body;
+  const children = [text(`<@${user.id}>${staff}`)];
   if (opts.type === 'purchase' && opts.product) {
-    heading = `### ${opts.product.emoji} ${opts.product.label} · ${opts.product.price}`;
-    body =
-      `Thanks for your order, <@${user.id}>. A team member will be with you shortly to arrange ` +
-      `delivery, setup and payment.\n\nWhile you wait, let us know your server name and anything ` +
-      `you'd like customised.`;
-  } else {
-    heading = '### Custom bot request';
-    body =
-      `Thanks, <@${user.id}>. ` +
-      (opts.details ? `Here's what we've got:\n\n>>> ${opts.details}\n\n` : '') +
-      `We'll review your request and reply with a quote and timeline.`;
-  }
+    children.push(text(`### ${opts.product.emoji} ${opts.product.label} · ${opts.product.price}`));
 
-  const view = container(config.brand.color, [
-    text(`<@${user.id}>${staff}`),
-    text(heading),
-    text(body),
-    sep(),
-    ticketControls(),
-  ]);
+    // Order summary from the purchase modal.
+    const lines = [];
+    if (opts.botName) lines.push(`**Bot name** · ${opts.botName}`);
+    if (opts.paymentLabelText) lines.push(`**Payment** · ${opts.paymentLabelText}`);
+    lines.push(`**Profile picture** · ${opts.avatarUrl ? 'attached below' : 'not provided'}`);
+    children.push(text(lines.join('\n')));
+
+    if (opts.avatarUrl) children.push(media(opts.avatarUrl));
+
+    children.push(
+      text(
+        `Thanks for your order, <@${user.id}>. A team member will be with you shortly to arrange ` +
+          `delivery, setup and payment.`,
+      ),
+    );
+  } else {
+    children.push(text('### Custom bot request'));
+    children.push(
+      text(
+        `Thanks, <@${user.id}>. ` +
+          (opts.details ? `Here's what we've got:\n\n>>> ${opts.details}\n\n` : '') +
+          `We'll review your request and reply with a quote and timeline.`,
+      ),
+    );
+  }
+  children.push(sep(), ticketControls());
+
+  const view = container(config.brand.color, children);
 
   await channel.send({
     flags: V2,

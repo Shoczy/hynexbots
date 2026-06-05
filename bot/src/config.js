@@ -74,6 +74,13 @@ const config = {
       description: 'HQ audio, queue & filters',
     },
   ],
+
+  /** Payment methods offered in the purchase modal dropdown. */
+  payments: [
+    { value: 'paysafecard', label: 'Paysafecard', emoji: '💳' },
+    { value: 'paypal', label: 'PayPal', emoji: '🅿️' },
+    { value: 'crypto', label: 'Crypto (BTC / ETH / USDT)', emoji: '🪙' },
+  ],
 };
 
 module.exports = config;

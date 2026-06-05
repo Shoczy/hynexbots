@@ -6,6 +6,7 @@ const {
 } = require('discord.js');
 const config = require('../config');
 const tickets = require('../tickets/manager');
+const { buildPurchaseModal, paymentLabel, MODAL_PREFIX } = require('../tickets/purchaseModal');
 
 module.exports = {
   name: 'interactionCreate',
@@ -18,13 +19,34 @@ module.exports = {
         return command.execute(interaction, client);
       }
 
-      // ── Product select menu → open purchase ticket ──
+      // ── Product select menu → ask for bot details via modal ──
       if (interaction.isStringSelectMenu() && interaction.customId === 'panel_select_product') {
         const product = config.catalog.find((p) => p.id === interaction.values[0]);
         if (!product) {
           return interaction.reply({ content: 'That product is no longer available.', ephemeral: true });
         }
-        return tickets.createTicket(interaction, { type: 'purchase', product });
+        return interaction.showModal(buildPurchaseModal(product));
+      }
+
+      // ── Purchase modal submit → open the ticket with the details ──
+      if (interaction.isModalSubmit() && interaction.customId.startsWith(MODAL_PREFIX)) {
+        const productId = interaction.customId.slice(MODAL_PREFIX.length);
+        const product = config.catalog.find((p) => p.id === productId);
+        if (!product) {
+          return interaction.reply({ content: 'That product is no longer available.', ephemeral: true });
+        }
+        const botName = interaction.fields.getTextInputValue('bot_name');
+        const payment = interaction.fields.getStringSelectValues('payment')[0] || null;
+        const files = interaction.fields.getUploadedFiles('avatar');
+        const avatarUrl = files?.first?.()?.url || null;
+        return tickets.createTicket(interaction, {
+          type: 'purchase',
+          product,
+          botName,
+          payment,
+          paymentLabelText: payment ? paymentLabel(payment) : null,
+          avatarUrl,
+        });
       }
 
       // ── Custom commission button → open a modal ─────
