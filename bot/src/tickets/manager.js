@@ -8,6 +8,7 @@ const {
 } = require('discord.js');
 const config = require('../config');
 const store = require('../store');
+const orders = require('./orders');
 const { V2, text, media, sep, container } = require('../lib/components');
 
 // Minimum wait between a user opening tickets, to stop open/close spam.
@@ -19,6 +20,20 @@ function ticketControls() {
     new ButtonBuilder().setCustomId('ticket_claim').setLabel('Claim').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('ticket_close').setLabel('Close').setStyle(ButtonStyle.Danger),
   );
+}
+
+/** Staff-only order pipeline controls, shown on purchase tickets. */
+function orderControls() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('order_status:paid').setLabel('Mark paid').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('order_status:delivered').setLabel('Mark delivered').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('order_status:cancelled').setLabel('Cancel order').setStyle(ButtonStyle.Secondary),
+  );
+}
+
+function isStaff(interaction) {
+  if (config.tickets.staffRoleId && interaction.member?.roles?.cache?.has(config.tickets.staffRoleId)) return true;
+  return Boolean(interaction.member?.permissions?.has(PermissionFlagsBits.ManageGuild));
 }
 
 /**
@@ -110,11 +125,22 @@ async function createTicket(interaction, opts) {
   // Build the opening message (Components V2).
   const staff = config.tickets.staffRoleId ? ` · <@&${config.tickets.staffRoleId}>` : '';
   const children = [text(`<@${user.id}>${staff}`)];
+  let order = null;
   if (opts.type === 'purchase' && opts.product) {
+    // Record the order so manual sales become a trackable pipeline.
+    order = orders.createOrder({
+      channelId: channel.id,
+      ownerId: user.id,
+      product: opts.product,
+      botName: opts.botName,
+      payment: opts.payment,
+      paymentLabel: opts.paymentLabelText,
+    });
+
     children.push(text(`### ${opts.product.emoji} ${opts.product.label} · ${opts.product.price}`));
 
     // Order summary from the purchase modal.
-    const lines = [];
+    const lines = [`**Order** · \`${order.id}\` · ${orders.STATUS_META.pending.emoji} Pending`];
     if (opts.botName) lines.push(`**Bot name** · ${opts.botName}`);
     if (opts.paymentLabelText) lines.push(`**Payment** · ${opts.paymentLabelText}`);
     lines.push(`**Profile picture** · ${opts.avatarUrl ? 'attached below' : 'not provided'}`);
@@ -138,7 +164,9 @@ async function createTicket(interaction, opts) {
       ),
     );
   }
-  children.push(sep(), ticketControls());
+  children.push(sep());
+  if (order) children.push(orderControls());
+  children.push(ticketControls());
 
   const view = container(config.brand.color, children);
 
@@ -166,6 +194,23 @@ async function claimTicket(interaction) {
   });
   const view = container(config.brand.success, [
     text(`Claimed by <@${interaction.user.id}> — they'll be looking after this ticket.`),
+  ]);
+  await interaction.reply({ flags: V2, components: [view] });
+}
+
+/** Staff moves a purchase order along its pipeline from inside the ticket. */
+async function setOrderStatus(interaction, status) {
+  if (!isStaff(interaction)) {
+    return interaction.reply({ content: 'Only staff can update an order.', ephemeral: true });
+  }
+  const order = orders.setStatus(interaction.channel.id, status, interaction.user.id);
+  if (!order) {
+    return interaction.reply({ content: 'No order is attached to this ticket.', ephemeral: true });
+  }
+  const meta = orders.STATUS_META[status];
+  const tone = status === 'cancelled' ? config.brand.danger : status === 'delivered' ? config.brand.success : config.brand.color;
+  const view = container(tone, [
+    text(`${meta.emoji} Order \`${order.id}\` marked **${meta.label}** by <@${interaction.user.id}>.`),
   ]);
   await interaction.reply({ flags: V2, components: [view] });
 }
@@ -223,4 +268,4 @@ async function closeTicket(interaction) {
   setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
 }
 
-module.exports = { createTicket, claimTicket, closeTicket, ticketControls };
+module.exports = { createTicket, claimTicket, closeTicket, setOrderStatus, ticketControls };

@@ -93,6 +93,10 @@ module.exports = {
       if (interaction.isButton() && interaction.customId === 'ticket_close') {
         return tickets.closeTicket(interaction);
       }
+      if (interaction.isButton() && interaction.customId.startsWith('order_status:')) {
+        const status = interaction.customId.slice('order_status:'.length);
+        return tickets.setOrderStatus(interaction, status);
+      }
     } catch (err) {
       console.error('Interaction error:', err);
       const msg = { content: '⚠ Something went wrong handling that interaction.', ephemeral: true };
