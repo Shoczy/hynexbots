@@ -4,7 +4,22 @@ const config = require('../config');
 const store = require('./db');
 const { sanitizeSettings, sanitizeGuildSync } = require('./validate');
 const { resolveFeatures } = require('./products');
+const { EDIT_TABS, ALL_PERMISSIONS } = require('./permissions');
 const launcher = require('../launcher/manager');
+
+/**
+ * Apply an invited member's edit scope: keep the stored value for any config
+ * section they aren't allowed to edit, take the incoming value for the rest.
+ * The owner (or a member granted every edit token) can change everything.
+ */
+function applyEditScope(current, incoming, access) {
+  if (access.isOwner) return incoming;
+  const out = { ...current };
+  for (const section of EDIT_TABS) {
+    if (access.permissions.includes(section)) out[section] = incoming[section];
+  }
+  return out;
+}
 
 /** Live process status for a bot, for the dashboard control panel. */
 function processStatus(bot) {
@@ -26,10 +41,13 @@ function typeMeta(type) {
 }
 
 function botView(bot, userId) {
+  const access = store.memberAccess(userId, bot.app_id);
   return {
     appId: bot.app_id,
     name: bot.name,
-    isOwner: bot.owner_id === userId,
+    isOwner: access ? access.isOwner : bot.owner_id === userId,
+    // The current user's effective permissions on this bot (owner = all).
+    permissions: access ? access.permissions : [],
     features: resolveFeatures(bot), // { tabs, modules, commandGroups } — scopes the editor
     ...typeMeta(bot.type),
   };
@@ -89,22 +107,56 @@ function mountConfigRoutes(app) {
   // ── Save a bot's config ─────────────────────────────
   app.put('/api/bots/:appId/config', dashboardAuth, (req, res) => {
     const { userId, settings } = req.body || {};
-    const bot = store.accessibleBot(String(userId || ''), req.params.appId);
-    if (!bot) return res.status(403).json({ ok: false, error: 'no_access' });
+    const access = store.memberAccess(String(userId || ''), req.params.appId);
+    if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
+    const bot = access.bot;
     // Enforce the product's capability scope: modules/commands outside it are dropped.
-    const saved = store.setConfig(bot.app_id, sanitizeSettings(settings, resolveFeatures(bot)));
+    const incoming = sanitizeSettings(settings, resolveFeatures(bot));
+    // Then enforce the member's edit scope: sections they can't edit keep their
+    // stored value, so a limited member can't change what they weren't granted.
+    const merged = applyEditScope(store.getConfig(bot.app_id), incoming, access);
+    const saved = store.setConfig(bot.app_id, merged);
     res.json({ ok: true, settings: saved });
   });
 
-  // ── Manage invited admins (owner only) ──────────────
+  // ── Team management ─────────────────────────────────
+  // Any member may view the team; only the owner can change it.
+
+  app.get('/api/bots/:appId/members', dashboardAuth, (req, res) => {
+    const userId = String(req.query.userId || '');
+    const access = store.memberAccess(userId, req.params.appId);
+    if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
+    res.json({
+      ok: true,
+      ownerId: access.bot.owner_id,
+      isOwner: access.isOwner,
+      members: store.listMembers(access.bot.app_id),
+      // Permission tokens the editable for this bot's product, so the UI only
+      // offers grants that make sense for the type they bought.
+      permissions: ALL_PERMISSIONS,
+      tabs: resolveFeatures(access.bot).tabs,
+    });
+  });
+
   app.post('/api/bots/:appId/members', dashboardAuth, (req, res) => {
-    const { userId, memberId } = req.body || {};
+    const { userId, memberId, permissions } = req.body || {};
     const bot = store.getBot(req.params.appId);
     if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
     if (!/^\d{5,20}$/.test(String(memberId || ''))) {
       return res.status(400).json({ ok: false, error: 'invalid_member_id' });
     }
-    store.addMember(bot.app_id, String(memberId));
+    if (String(memberId) === String(bot.owner_id)) {
+      return res.status(400).json({ ok: false, error: 'is_owner' });
+    }
+    store.addMember(bot.app_id, String(memberId), Array.isArray(permissions) ? permissions : []);
+    res.json({ ok: true, members: store.listMembers(bot.app_id) });
+  });
+
+  app.patch('/api/bots/:appId/members/:memberId', dashboardAuth, (req, res) => {
+    const { userId, permissions } = req.body || {};
+    const bot = store.getBot(req.params.appId);
+    if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
+    store.setMemberPermissions(bot.app_id, String(req.params.memberId), Array.isArray(permissions) ? permissions : []);
     res.json({ ok: true, members: store.listMembers(bot.app_id) });
   });
 
@@ -140,8 +192,12 @@ function mountConfigRoutes(app) {
 
   app.post('/api/bots/:appId/process/:action', dashboardAuth, async (req, res) => {
     const { userId } = req.body || {};
-    const bot = store.accessibleBot(String(userId || ''), req.params.appId);
-    if (!bot) return res.status(403).json({ ok: false, error: 'no_access' });
+    const access = store.memberAccess(String(userId || ''), req.params.appId);
+    if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
+    if (!access.isOwner && !access.permissions.includes('process')) {
+      return res.status(403).json({ ok: false, error: 'forbidden' });
+    }
+    const bot = access.bot;
     if (!store.getProcess(bot.app_id)) return res.status(400).json({ ok: false, error: 'not_hosted' });
 
     const action = req.params.action;

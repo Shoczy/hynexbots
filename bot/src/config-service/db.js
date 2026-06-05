@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
+const { ALL_PERMISSIONS, sanitizePermissions } = require('./permissions');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -71,6 +72,8 @@ function ensureColumn(table, column, decl) {
   if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
 }
 ensureColumn('bots', 'features', 'TEXT');
+// Per-member granular permissions (JSON array of tokens; see permissions.js).
+ensureColumn('bot_members', 'permissions', 'TEXT');
 
 // Locally-managed bot processes: when a bot is registered with its token, the
 // main host can spawn and supervise the sold-bot process. Stored so they can be
@@ -325,12 +328,26 @@ function accessibleBot(userId, appId) {
     .get(String(appId), String(userId), String(userId));
 }
 
-function addMember(appId, userId) {
-  db.prepare('INSERT OR IGNORE INTO bot_members (app_id, user_id, role, added_at) VALUES (?, ?, ?, ?)').run(
+function parsePerms(raw) {
+  try {
+    const a = JSON.parse(raw || '[]');
+    return Array.isArray(a) ? sanitizePermissions(a) : [];
+  } catch {
+    return [];
+  }
+}
+
+function addMember(appId, userId, permissions = []) {
+  db.prepare(
+    'INSERT OR IGNORE INTO bot_members (app_id, user_id, role, permissions, added_at) VALUES (?, ?, ?, ?, ?)',
+  ).run(String(appId), String(userId), 'member', JSON.stringify(sanitizePermissions(permissions)), Date.now());
+}
+
+function setMemberPermissions(appId, userId, permissions) {
+  db.prepare('UPDATE bot_members SET permissions = ? WHERE app_id = ? AND user_id = ?').run(
+    JSON.stringify(sanitizePermissions(permissions)),
     String(appId),
     String(userId),
-    'admin',
-    Date.now(),
   );
 }
 
@@ -339,7 +356,28 @@ function removeMember(appId, userId) {
 }
 
 function listMembers(appId) {
-  return db.prepare('SELECT user_id, role, added_at FROM bot_members WHERE app_id = ?').all(String(appId));
+  return db
+    .prepare('SELECT user_id, role, permissions, added_at FROM bot_members WHERE app_id = ?')
+    .all(String(appId))
+    .map((m) => ({ userId: m.user_id, role: m.role, permissions: parsePerms(m.permissions), addedAt: m.added_at }));
+}
+
+/**
+ * Resolve a user's access to a bot, with their effective permissions.
+ * Returns { bot, isOwner, permissions } or null if they have no access.
+ * The owner implicitly holds every permission.
+ */
+function memberAccess(userId, appId) {
+  const bot = db.prepare("SELECT * FROM bots WHERE status = 'active' AND app_id = ?").get(String(appId));
+  if (!bot) return null;
+  if (bot.owner_id && bot.owner_id === String(userId)) {
+    return { bot, isOwner: true, permissions: [...ALL_PERMISSIONS] };
+  }
+  const m = db
+    .prepare('SELECT permissions FROM bot_members WHERE app_id = ? AND user_id = ?')
+    .get(String(appId), String(userId));
+  if (!m) return null;
+  return { bot, isOwner: false, permissions: parsePerms(m.permissions) };
 }
 
 // ── Config ────────────────────────────────────────────
@@ -419,7 +457,9 @@ module.exports = {
   redeemKey,
   listBotsForUser,
   accessibleBot,
+  memberAccess,
   addMember,
+  setMemberPermissions,
   removeMember,
   listMembers,
   getConfig,

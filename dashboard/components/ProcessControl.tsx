@@ -24,7 +24,7 @@ function Section({ children }: { children: ReactNode }) {
   );
 }
 
-export function ProcessControl({ appId }: { appId: string }) {
+export function ProcessControl({ appId, canControl = true }: { appId: string; canControl?: boolean }) {
   const [status, setStatus] = useState<ProcessStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -141,7 +141,9 @@ export function ProcessControl({ appId }: { appId: string }) {
         </div>
 
         <div className="flex items-center gap-2">
-          {online ? (
+          {!canControl ? (
+            <span className="text-xs text-mist-faint">View only</span>
+          ) : online ? (
             <>
               <button onClick={() => act('restart')} disabled={busy !== null} className="btn-ghost text-sm">
                 {busy === 'restart' ? <Spinner className="h-4 w-4" /> : null}

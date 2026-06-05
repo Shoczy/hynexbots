@@ -51,6 +51,34 @@ export const configApi = {
       body: JSON.stringify({ userId }),
     });
   },
+  listMembers(appId: string, userId: string) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/members?userId=${encodeURIComponent(userId)}`);
+  },
+  addMember(appId: string, userId: string, memberId: string, permissions: string[]) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, memberId, permissions }),
+    });
+  },
+  setMemberPermissions(appId: string, userId: string, memberId: string, permissions: string[]) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/members/${encodeURIComponent(memberId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ userId, permissions }),
+    });
+  },
+  removeMember(appId: string, userId: string, memberId: string) {
+    return call(
+      `/api/bots/${encodeURIComponent(appId)}/members/${encodeURIComponent(memberId)}?userId=${encodeURIComponent(userId)}`,
+      { method: 'DELETE' },
+    );
+  },
+};
+
+export type TeamMember = {
+  userId: string;
+  role: string;
+  permissions: string[];
+  addedAt: number;
 };
 
 export type ProcessStatus = {

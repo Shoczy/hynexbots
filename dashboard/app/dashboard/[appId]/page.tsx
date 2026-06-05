@@ -9,6 +9,7 @@ import { MessagesEditor } from '@/components/MessagesEditor';
 import { CommandsEditor } from '@/components/CommandsEditor';
 import { ProcessControl } from '@/components/ProcessControl';
 import { BotLogs } from '@/components/BotLogs';
+import { TeamEditor } from '@/components/TeamEditor';
 import { ModerationEditor } from '@/components/ModerationEditor';
 import { TicketsEditor } from '@/components/TicketsEditor';
 import { EconomyEditor } from '@/components/EconomyEditor';
@@ -26,7 +27,7 @@ import {
 } from '@/lib/settings';
 import { GuildProvider, type Guild } from '@/lib/guildContext';
 
-type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'logs';
+type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'logs' | 'team';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'modules', label: 'Modules' },
@@ -44,7 +45,7 @@ export default function EditorPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bot, setBot] = useState<{ name: string; label: string; emoji: string; type?: string; features?: Features } | null>(null);
+  const [bot, setBot] = useState<{ name: string; label: string; emoji: string; type?: string; features?: Features; isOwner?: boolean; permissions?: string[] } | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [guild, setGuild] = useState<Guild | null>(null);
   const [tab, setTab] = useState<Tab>('basics');
@@ -71,6 +72,19 @@ export default function EditorPage() {
       setLoading(false);
     })();
   }, [appId]);
+
+  // Keep the active tab valid for this user's access (a member may not be able
+  // to see the default 'basics' tab).
+  useEffect(() => {
+    if (!bot) return;
+    const f = effectiveFeatures(bot.type, bot.features);
+    const owner = Boolean(bot.isOwner);
+    const p = bot.permissions ?? [];
+    const prod = TABS.filter((t) => f.tabs.includes(t.id)).map((t) => t.id as Tab);
+    const editable = owner ? prod : prod.filter((id) => p.includes(id));
+    const ids: Tab[] = [...editable, 'logs', ...(owner ? (['team'] as Tab[]) : [])];
+    setTab((cur) => (ids.includes(cur) ? cur : ids[0]));
+  }, [bot]);
 
   const markDirty = () => {
     setDirty(true);
@@ -157,9 +171,21 @@ export default function EditorPage() {
   // Scope the editor to this bot's product. Server `features` win; otherwise we
   // fall back to a type-based scope so the UI never shows unrelated systems.
   const features = effectiveFeatures(bot?.type, bot?.features);
-  // Config tabs are scoped to the product; the Logs tab is always available.
-  const visibleTabs = [...TABS.filter((t) => features.tabs.includes(t.id)), { id: 'logs' as Tab, label: 'Logs' }];
+  const isOwner = Boolean(bot?.isOwner);
+  const perms = bot?.permissions ?? [];
+  // Config tabs are scoped to the product, then further to what this member may
+  // edit (the owner sees everything). Logs are read-only and always available;
+  // the Team tab is owner-only.
+  const productTabs = TABS.filter((t) => features.tabs.includes(t.id));
+  const editableTabs = isOwner ? productTabs : productTabs.filter((t) => perms.includes(t.id));
+  const visibleTabs = [
+    ...editableTabs,
+    { id: 'logs' as Tab, label: 'Logs' },
+    ...(isOwner ? [{ id: 'team' as Tab, label: 'Team' }] : []),
+  ];
   const visibleModules = MODULES.filter((m) => features.modules.includes(m.key));
+  const canControlProcess = isOwner || perms.includes('process');
+  const canEditAnything = isOwner || editableTabs.length > 0;
 
   return (
     <>
@@ -183,7 +209,7 @@ export default function EditorPage() {
 
         {/* Live process status & controls */}
         <div className="mt-6">
-          <ProcessControl appId={appId} />
+          <ProcessControl appId={appId} canControl={canControlProcess} />
         </div>
 
         {/* Tabs */}
@@ -287,6 +313,12 @@ export default function EditorPage() {
             </motion.div>
           )}
 
+          {tab === 'team' && isOwner && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <TeamEditor appId={appId} />
+            </motion.div>
+          )}
+
           {tab === 'commands' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <CommandsEditor
@@ -303,24 +335,26 @@ export default function EditorPage() {
         </GuildProvider>
       </main>
 
-      {/* Sticky save bar */}
-      <div className="sticky bottom-0 z-30 border-t border-ink-700/60 bg-ink-950/80 backdrop-blur-xl">
-        <div className="container-content flex items-center justify-between py-4">
-          <p className="text-sm text-mist-muted">
-            {saved ? (
-              <span className="text-emerald-300">✓ Saved — your bot will pick this up shortly.</span>
-            ) : dirty ? (
-              'You have unsaved changes.'
-            ) : (
-              'All changes saved.'
-            )}
-          </p>
-          <button onClick={save} className="btn-primary" disabled={!dirty || saving}>
-            {saving ? <Spinner /> : null}
-            {saving ? 'Saving…' : 'Save changes'}
-          </button>
+      {/* Sticky save bar — config tabs only (Team & Logs manage themselves). */}
+      {tab !== 'team' && tab !== 'logs' && (
+        <div className="sticky bottom-0 z-30 border-t border-ink-700/60 bg-ink-950/80 backdrop-blur-xl">
+          <div className="container-content flex items-center justify-between py-4">
+            <p className="text-sm text-mist-muted">
+              {saved ? (
+                <span className="text-emerald-300">✓ Saved — your bot will pick this up shortly.</span>
+              ) : dirty ? (
+                'You have unsaved changes.'
+              ) : (
+                'All changes saved.'
+              )}
+            </p>
+            <button onClick={save} className="btn-primary" disabled={!dirty || saving || !canEditAnything}>
+              {saving ? <Spinner /> : null}
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
