@@ -72,6 +72,16 @@ export const configApi = {
       { method: 'DELETE' },
     );
   },
+  getAudit(appId: string, userId: string) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/audit?userId=${encodeURIComponent(userId)}`);
+  },
+};
+
+export type AuditEntry = {
+  actorId: string;
+  action: string;
+  detail: string;
+  at: number;
 };
 
 export type TeamMember = {

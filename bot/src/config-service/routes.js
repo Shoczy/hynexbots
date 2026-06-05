@@ -5,7 +5,18 @@ const store = require('./db');
 const { sanitizeSettings, sanitizeGuildSync } = require('./validate');
 const { resolveFeatures } = require('./products');
 const { EDIT_TABS, ALL_PERMISSIONS } = require('./permissions');
+const { rateLimit } = require('./rateLimit');
 const launcher = require('../launcher/manager');
+
+/** Top-level config sections that differ between two settings objects. */
+function changedSections(before, after) {
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  const changed = [];
+  for (const k of keys) {
+    if (JSON.stringify(before?.[k]) !== JSON.stringify(after?.[k])) changed.push(k);
+  }
+  return changed;
+}
 
 /**
  * Apply an invited member's edit scope: keep the stored value for any config
@@ -74,12 +85,21 @@ function mountConfigRoutes(app) {
     next();
   };
 
+  // Rate limits. Dashboard calls are proxied server-to-server from Next.js, so
+  // every request shares the Next host's IP — key by the acting userId instead.
+  // Bot-realm calls come straight from each sold bot, so key by appId.
+  const userKey = (req) => String(req.body?.userId || req.query.userId || req.ip || 'anon');
+  const appKey = (req) => String(req.query.appId || req.body?.appId || req.ip || 'anon');
+  const writeLimit = rateLimit({ windowMs: 60_000, max: 60, key: userKey });
+  const botLimit = rateLimit({ windowMs: 60_000, max: 120, key: appKey });
+
   // ── Claim a bot via its backup key ──────────────────
-  app.post('/api/bots/redeem', dashboardAuth, (req, res) => {
+  app.post('/api/bots/redeem', writeLimit, dashboardAuth, (req, res) => {
     const { userId, key } = req.body || {};
     if (!userId || !key) return res.status(400).json({ ok: false, error: 'userId and key are required' });
     const result = store.redeemKey(key, String(userId));
     if (!result.ok) return res.status(400).json(result);
+    store.addAudit({ appId: result.bot.app_id, actorId: String(userId), action: 'bot.claim', detail: 'redeemed license key' });
     return res.json({ ok: true, bot: botView(result.bot, String(userId)) });
   });
 
@@ -105,7 +125,7 @@ function mountConfigRoutes(app) {
   });
 
   // ── Save a bot's config ─────────────────────────────
-  app.put('/api/bots/:appId/config', dashboardAuth, (req, res) => {
+  app.put('/api/bots/:appId/config', writeLimit, dashboardAuth, (req, res) => {
     const { userId, settings } = req.body || {};
     const access = store.memberAccess(String(userId || ''), req.params.appId);
     if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
@@ -114,8 +134,13 @@ function mountConfigRoutes(app) {
     const incoming = sanitizeSettings(settings, resolveFeatures(bot));
     // Then enforce the member's edit scope: sections they can't edit keep their
     // stored value, so a limited member can't change what they weren't granted.
-    const merged = applyEditScope(store.getConfig(bot.app_id), incoming, access);
+    const before = store.getConfig(bot.app_id);
+    const merged = applyEditScope(before, incoming, access);
     const saved = store.setConfig(bot.app_id, merged);
+    const changed = changedSections(before, saved);
+    if (changed.length) {
+      store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'config.save', detail: `updated: ${changed.join(', ')}` });
+    }
     res.json({ ok: true, settings: saved });
   });
 
@@ -138,7 +163,7 @@ function mountConfigRoutes(app) {
     });
   });
 
-  app.post('/api/bots/:appId/members', dashboardAuth, (req, res) => {
+  app.post('/api/bots/:appId/members', writeLimit, dashboardAuth, (req, res) => {
     const { userId, memberId, permissions } = req.body || {};
     const bot = store.getBot(req.params.appId);
     if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
@@ -148,24 +173,38 @@ function mountConfigRoutes(app) {
     if (String(memberId) === String(bot.owner_id)) {
       return res.status(400).json({ ok: false, error: 'is_owner' });
     }
-    store.addMember(bot.app_id, String(memberId), Array.isArray(permissions) ? permissions : []);
+    const perms = Array.isArray(permissions) ? permissions : [];
+    store.addMember(bot.app_id, String(memberId), perms);
+    store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'member.add', detail: `added ${memberId} [${perms.join(', ') || 'view only'}]` });
     res.json({ ok: true, members: store.listMembers(bot.app_id) });
   });
 
-  app.patch('/api/bots/:appId/members/:memberId', dashboardAuth, (req, res) => {
+  app.patch('/api/bots/:appId/members/:memberId', writeLimit, dashboardAuth, (req, res) => {
     const { userId, permissions } = req.body || {};
     const bot = store.getBot(req.params.appId);
     if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
-    store.setMemberPermissions(bot.app_id, String(req.params.memberId), Array.isArray(permissions) ? permissions : []);
+    const perms = Array.isArray(permissions) ? permissions : [];
+    store.setMemberPermissions(bot.app_id, String(req.params.memberId), perms);
+    store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'member.update', detail: `${req.params.memberId} → [${perms.join(', ') || 'view only'}]` });
     res.json({ ok: true, members: store.listMembers(bot.app_id) });
   });
 
-  app.delete('/api/bots/:appId/members/:memberId', dashboardAuth, (req, res) => {
+  app.delete('/api/bots/:appId/members/:memberId', writeLimit, dashboardAuth, (req, res) => {
     const userId = String(req.query.userId || '');
     const bot = store.getBot(req.params.appId);
     if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
     store.removeMember(bot.app_id, String(req.params.memberId));
+    store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'member.remove', detail: `removed ${req.params.memberId}` });
     res.json({ ok: true, members: store.listMembers(bot.app_id) });
+  });
+
+  // ── Audit log (owner only) ──────────────────────────
+  app.get('/api/bots/:appId/audit', dashboardAuth, (req, res) => {
+    const userId = String(req.query.userId || '');
+    const access = store.memberAccess(userId, req.params.appId);
+    if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
+    if (!access.isOwner) return res.status(403).json({ ok: false, error: 'owner_only' });
+    res.json({ ok: true, entries: store.listAudit(access.bot.app_id, 100) });
   });
 
   // ── Process control (dashboard): status, restart, stop ──
@@ -190,7 +229,7 @@ function mountConfigRoutes(app) {
     });
   });
 
-  app.post('/api/bots/:appId/process/:action', dashboardAuth, async (req, res) => {
+  app.post('/api/bots/:appId/process/:action', writeLimit, dashboardAuth, async (req, res) => {
     const { userId } = req.body || {};
     const access = store.memberAccess(String(userId || ''), req.params.appId);
     if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
@@ -204,11 +243,13 @@ function mountConfigRoutes(app) {
     if (action === 'stop') {
       await launcher.stop(bot.app_id);
       store.setAutostart(bot.app_id, false);
+      store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'process.stop', detail: 'stopped the bot' });
       return res.json({ ok: true, process: processStatus(bot) });
     }
     if (action === 'restart' || action === 'start') {
       const result = await launcher.restart(bot.app_id);
       if (!result.ok) return res.status(400).json({ ok: false, error: result.reason });
+      store.addAudit({ appId: bot.app_id, actorId: String(userId), action: `process.${action}`, detail: `${action}ed the bot` });
       return res.json({ ok: true, process: processStatus(bot) });
     }
     return res.status(400).json({ ok: false, error: 'unknown_action' });
@@ -216,7 +257,7 @@ function mountConfigRoutes(app) {
 
   // ── A customer's running bot fetches its own config ──
   // The bot passes its own application id (client.application.id).
-  app.get('/api/bot/config', botAuth, (req, res) => {
+  app.get('/api/bot/config', botLimit, botAuth, (req, res) => {
     const appId = String(req.query.appId || '');
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
     if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
@@ -225,7 +266,7 @@ function mountConfigRoutes(app) {
 
   // ── A customer's running bot reports its guild roles & channels ──
   // Powers real pick-lists in the dashboard (instead of pasting IDs).
-  app.post('/api/bot/sync', botAuth, (req, res) => {
+  app.post('/api/bot/sync', botLimit, botAuth, (req, res) => {
     const appId = String(req.body?.appId || '');
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
     if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });

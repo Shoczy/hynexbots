@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui';
 import { EDIT_TABS, permLabel } from '@/lib/permissions';
-import type { TeamMember } from '@/lib/configApi';
+import type { TeamMember, AuditEntry } from '@/lib/configApi';
 
 type Loaded = {
   ownerId: string | null;
@@ -117,8 +117,79 @@ export function TeamEditor({ appId }: { appId: string }) {
           ))
         )}
       </div>
+
+      <ActivityLog appId={appId} />
     </div>
   );
+}
+
+function ActivityLog({ appId }: { appId: string }) {
+  const [entries, setEntries] = useState<AuditEntry[] | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/bot/${appId}/audit`, { cache: 'no-store' });
+        const data = await res.json();
+        if (data.ok) setEntries(data.entries || []);
+        else setEntries([]);
+      } catch {
+        setEntries([]);
+      }
+    })();
+  }, [appId]);
+
+  if (entries === null) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-mist-faint">Recent activity</div>
+      {entries.length === 0 ? (
+        <div className="card border-dashed px-5 py-6 text-center text-sm text-mist-muted">
+          No activity recorded yet. Config changes, team edits and start/stop actions show up here.
+        </div>
+      ) : (
+        <div className="card divide-y divide-ink-700/60 p-0">
+          {entries.map((e, i) => (
+            <div key={i} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+              <div className="min-w-0">
+                <span className="font-medium text-mist">{actionLabel(e.action)}</span>
+                {e.detail && <span className="ml-2 text-mist-muted">{e.detail}</span>}
+              </div>
+              <div className="shrink-0 text-right text-xs text-mist-faint">
+                <div className="font-mono">{e.actorId}</div>
+                <div>{timeAgo(e.at)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function actionLabel(action: string) {
+  const map: Record<string, string> = {
+    'config.save': 'Saved config',
+    'member.add': 'Added member',
+    'member.update': 'Updated permissions',
+    'member.remove': 'Removed member',
+    'process.start': 'Started bot',
+    'process.restart': 'Restarted bot',
+    'process.stop': 'Stopped bot',
+    'bot.claim': 'Claimed bot',
+  };
+  return map[action] || action;
+}
+
+function timeAgo(ts: number) {
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
 }
 
 function AddMember({

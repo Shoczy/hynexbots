@@ -16,6 +16,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
 const { ALL_PERMISSIONS, sanitizePermissions } = require('./permissions');
+const secrets = require('./secrets');
 
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -90,6 +91,21 @@ db.exec(`
     updated_at INTEGER NOT NULL,
     FOREIGN KEY (app_id) REFERENCES bots(app_id) ON DELETE CASCADE
   );
+`);
+
+// Accountability trail: who changed what, per bot. Especially relevant now that
+// invited team members (not just the owner) can edit config and control the bot.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    app_id   TEXT NOT NULL,
+    actor_id TEXT NOT NULL,            -- Discord user id who performed the action
+    action   TEXT NOT NULL,            -- e.g. config.save | member.add | process.stop
+    detail   TEXT,                     -- short human-readable context
+    at       INTEGER NOT NULL,
+    FOREIGN KEY (app_id) REFERENCES bots(app_id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_audit_app ON audit_log(app_id, at);
 `);
 
 // ── Default settings schema ───────────────────────────
@@ -414,6 +430,12 @@ function getGuild(appId) {
 }
 
 // ── Managed processes (auto-launched sold bots) ──────
+// Tokens are encrypted at rest (secrets.js) and transparently decrypted on read.
+function decryptRow(row) {
+  if (row && row.token) row.token = secrets.decrypt(row.token);
+  return row;
+}
+
 function setProcess({ appId, type, token, guildId = null, autostart = true }) {
   db.prepare(
     `INSERT INTO bot_process (app_id, type, token, guild_id, autostart, updated_at)
@@ -421,16 +443,35 @@ function setProcess({ appId, type, token, guildId = null, autostart = true }) {
      ON CONFLICT(app_id) DO UPDATE SET
        type = excluded.type, token = excluded.token, guild_id = excluded.guild_id,
        autostart = excluded.autostart, updated_at = excluded.updated_at`,
-  ).run(String(appId), String(type), String(token), guildId ? String(guildId) : null, autostart ? 1 : 0, Date.now());
+  ).run(
+    String(appId),
+    String(type),
+    secrets.encrypt(String(token)),
+    guildId ? String(guildId) : null,
+    autostart ? 1 : 0,
+    Date.now(),
+  );
 }
 
 function getProcess(appId) {
-  return db.prepare('SELECT * FROM bot_process WHERE app_id = ?').get(String(appId));
+  return decryptRow(db.prepare('SELECT * FROM bot_process WHERE app_id = ?').get(String(appId)));
 }
 
 function listAutostart() {
-  return db.prepare('SELECT * FROM bot_process WHERE autostart = 1').all();
+  return db.prepare('SELECT * FROM bot_process WHERE autostart = 1').all().map(decryptRow);
 }
+
+/** One-time migration: encrypt any tokens still stored as plaintext. */
+function migrateProcessTokens() {
+  const rows = db.prepare('SELECT app_id, token FROM bot_process').all();
+  const update = db.prepare('UPDATE bot_process SET token = ? WHERE app_id = ?');
+  for (const row of rows) {
+    if (row.token && !secrets.isEncrypted(row.token)) {
+      update.run(secrets.encrypt(row.token), row.app_id);
+    }
+  }
+}
+migrateProcessTokens();
 
 function setAutostart(appId, on) {
   db.prepare('UPDATE bot_process SET autostart = ? WHERE app_id = ?').run(on ? 1 : 0, String(appId));
@@ -438,6 +479,24 @@ function setAutostart(appId, on) {
 
 function deleteProcess(appId) {
   db.prepare('DELETE FROM bot_process WHERE app_id = ?').run(String(appId));
+}
+
+// ── Audit log ─────────────────────────────────────────
+function addAudit({ appId, actorId, action, detail = '' }) {
+  db.prepare('INSERT INTO audit_log (app_id, actor_id, action, detail, at) VALUES (?, ?, ?, ?, ?)').run(
+    String(appId),
+    String(actorId),
+    String(action),
+    String(detail || ''),
+    Date.now(),
+  );
+}
+
+function listAudit(appId, limit = 100) {
+  return db
+    .prepare('SELECT actor_id, action, detail, at FROM audit_log WHERE app_id = ? ORDER BY at DESC LIMIT ?')
+    .all(String(appId), Math.min(Math.max(1, limit | 0), 500))
+    .map((r) => ({ actorId: r.actor_id, action: r.action, detail: r.detail, at: r.at }));
 }
 
 module.exports = {
@@ -464,4 +523,6 @@ module.exports = {
   listMembers,
   getConfig,
   setConfig,
+  addAudit,
+  listAudit,
 };
