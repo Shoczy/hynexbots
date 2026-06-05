@@ -1,9 +1,9 @@
 export const brand = {
   name: 'Hynex Bots',
   tagline: 'Premium Discord bots, shipped fast.',
-  // Set this to your Discord invite so every CTA points to your ticket panel.
-  discordInvite: 'https://discord.gg/your-invite',
-  email: 'hello@hynexbots.com',
+  // Set NEXT_PUBLIC_DISCORD_INVITE so every CTA points to your ticket panel.
+  discordInvite: process.env.NEXT_PUBLIC_DISCORD_INVITE || 'https://discord.gg/your-invite',
+  email: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'hello@hynexbots.com',
   // Public fleet-status endpoint exposed by the bot (bot/src/fleet/server.js).
   // Override per-environment with NEXT_PUBLIC_FLEET_STATUS_URL.
   fleetStatusUrl:
@@ -91,11 +91,17 @@ export const steps = [
   { n: '04', title: 'Ship & support', body: 'Your bot goes live. We host, monitor, and support it for as long as you need.' },
 ];
 
+// Headline numbers. Set the NEXT_PUBLIC_STAT_* env vars to your real figures;
+// the defaults are placeholders for launch.
+const statNum = (v: string | undefined, fallback: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) && v !== undefined && v !== '' ? n : fallback;
+};
 export const stats = [
-  { value: 400, suffix: '+', label: 'Bots delivered' },
-  { value: 4.9, suffix: '★', label: 'Avg. rating' },
-  { value: 24, suffix: 'h', label: 'Avg. delivery' },
-  { value: 180, suffix: '+', label: 'Happy servers' },
+  { value: statNum(process.env.NEXT_PUBLIC_STAT_DELIVERED, 400), suffix: '+', label: 'Bots delivered' },
+  { value: statNum(process.env.NEXT_PUBLIC_STAT_RATING, 4.9), suffix: '★', label: 'Avg. rating' },
+  { value: statNum(process.env.NEXT_PUBLIC_STAT_DELIVERY_H, 24), suffix: 'h', label: 'Avg. delivery' },
+  { value: statNum(process.env.NEXT_PUBLIC_STAT_SERVERS, 180), suffix: '+', label: 'Happy servers' },
 ];
 
 export const faqs = [
