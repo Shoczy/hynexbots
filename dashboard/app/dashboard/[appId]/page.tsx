@@ -46,7 +46,7 @@ export default function EditorPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bot, setBot] = useState<{ name: string; label: string; emoji: string; type?: string; features?: Features; isOwner?: boolean; permissions?: string[] } | null>(null);
+  const [bot, setBot] = useState<{ name: string; label: string; emoji: string; type?: string; features?: Features; isOwner?: boolean; permissions?: string[]; inviteUrl?: string | null } | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [guild, setGuild] = useState<Guild | null>(null);
   const [tab, setTab] = useState<Tab>('basics');
@@ -208,6 +208,19 @@ export default function EditorPage() {
             </p>
           </div>
         </div>
+
+        {/* One-click invite with the right permissions for this product. */}
+        {bot?.inviteUrl && (
+          <div className="mt-6 flex flex-col gap-3 rounded-xl border border-ink-700 bg-ink-900/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-medium text-mist">Add your bot to a server</div>
+              <p className="text-xs text-mist-muted">Opens Discord with exactly the permissions this bot needs — no extra access.</p>
+            </div>
+            <a href={bot.inviteUrl} target="_blank" rel="noreferrer" className="btn-primary shrink-0 text-sm">
+              Add to server
+            </a>
+          </div>
+        )}
 
         {/* Live process status & controls */}
         <div className="mt-6">

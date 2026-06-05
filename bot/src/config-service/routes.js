@@ -6,6 +6,7 @@ const { sanitizeSettings, sanitizeGuildSync } = require('./validate');
 const { resolveFeatures } = require('./products');
 const { EDIT_TABS, ALL_PERMISSIONS } = require('./permissions');
 const { rateLimit } = require('./rateLimit');
+const { inviteUrl } = require('./invite');
 const launcher = require('../launcher/manager');
 
 /** Top-level config sections that differ between two settings objects. */
@@ -60,6 +61,7 @@ function botView(bot, userId) {
     // The current user's effective permissions on this bot (owner = all).
     permissions: access ? access.permissions : [],
     features: resolveFeatures(bot), // { tabs, modules, commandGroups } — scopes the editor
+    inviteUrl: inviteUrl(bot.app_id, bot.type), // one-click "add to server" with the right perms
     ...typeMeta(bot.type),
   };
 }
