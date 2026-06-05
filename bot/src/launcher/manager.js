@@ -28,6 +28,13 @@ const LOG_CAP = 500; // lines kept per bot for the dashboard log viewer
 const procs = new Map(); // appId -> { child, type, name, startedAt, restarts, stopping }
 const logBuffers = new Map(); // appId -> [{ t, line, level }]
 
+// Optional callback fired when a bot crash-loops past MAX_RESTARTS. The main bot
+// wires this on ready to DM the owner (keeps the launcher free of discord.js).
+let crashNotifier = null;
+function onCrash(fn) {
+  crashNotifier = typeof fn === 'function' ? fn : null;
+}
+
 /** Append output to a bot's rolling log buffer (one entry per line). */
 function pushLog(appId, chunk, level = 'out') {
   const buf = logBuffers.get(appId) || [];
@@ -138,6 +145,13 @@ function spawnChild(appId, type, token, name) {
       console.error(`${tag} gave up after ${MAX_RESTARTS} restarts.`);
       noteLog(appId, `── gave up after ${MAX_RESTARTS} restarts ──`);
       procs.delete(appId);
+      if (crashNotifier) {
+        try {
+          crashNotifier({ appId, type, name, restarts: MAX_RESTARTS, lastCode: code });
+        } catch (e) {
+          console.error('crash notifier failed:', e);
+        }
+      }
     }
   });
   return rec;
@@ -232,4 +246,4 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-module.exports = { launch, stop, restart, relaunchAll, statusList, isManaged, isRunning, getLogs };
+module.exports = { launch, stop, restart, relaunchAll, statusList, isManaged, isRunning, getLogs, onCrash };

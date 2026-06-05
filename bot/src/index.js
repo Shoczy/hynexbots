@@ -3,6 +3,7 @@ const path = require('path');
 const { Client, Collection, GatewayIntentBits, Partials } = require('discord.js');
 const config = require('./config');
 const { startFleetServer } = require('./fleet/server');
+const { startBackupSchedule } = require('./backup');
 
 if (!config.token) {
   console.error('✖ DISCORD_TOKEN is missing. Copy .env.example to .env and fill it in.');
@@ -62,6 +63,9 @@ for (const file of fs.readdirSync(eventsPath).filter((f) => f.endsWith('.js'))) 
 
 // ── Start the fleet heartbeat server alongside the bot ──
 startFleetServer(client);
+
+// ── Nightly DB snapshots (immediate one on boot, then every 24h) ──
+startBackupSchedule();
 
 client.login(config.token);
 
