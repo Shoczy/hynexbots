@@ -16,8 +16,28 @@ export function Process() {
         />
 
         <Stagger className="relative mt-16 grid gap-8 md:grid-cols-4">
-          {/* connecting line */}
-          <div className="absolute left-0 right-0 top-7 hidden h-px hairline md:block" />
+          {/* connecting line — dashed wave threaded through the step markers */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 hidden h-14 md:block" aria-hidden="true">
+            <svg className="h-full w-full" viewBox="0 0 1200 40" preserveAspectRatio="none" fill="none">
+              <defs>
+                <linearGradient id="processWave" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#818cf8" stopOpacity="0" />
+                  <stop offset="14%" stopColor="#818cf8" stopOpacity="0.45" />
+                  <stop offset="50%" stopColor="#a5a3ff" stopOpacity="0.6" />
+                  <stop offset="86%" stopColor="#818cf8" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M28 20 C 131 6 233 6 336 20 C 439 34 541 34 644 20 C 747 6 850 6 953 20"
+                stroke="url(#processWave)"
+                strokeWidth="1.5"
+                strokeDasharray="2 7"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </div>
           {steps.map((s) => (
             <motion.div key={s.n} variants={staggerItem} className="relative">
               <div className="relative z-10 grid h-14 w-14 place-items-center rounded-2xl border border-ink-600 bg-ink-900 font-display text-lg font-semibold text-accent-soft">

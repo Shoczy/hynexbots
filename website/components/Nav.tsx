@@ -7,11 +7,11 @@ import { Icons } from './Icons';
 import { brand } from '@/lib/data';
 
 const links = [
-  { href: '#bots', label: 'Bots' },
-  { href: '#why', label: 'Why Hynex' },
-  { href: '#hosting', label: 'Hosting' },
-  { href: '#process', label: 'Process' },
-  { href: '#faq', label: 'FAQ' },
+  { href: '/#bots', label: 'Bots' },
+  { href: '/#why', label: 'Why Hynex' },
+  { href: '/#process', label: 'Process' },
+  { href: '/#faq', label: 'FAQ' },
+  { href: '/status', label: 'Status' },
 ];
 
 export function Nav() {
@@ -38,7 +38,7 @@ export function Nav() {
         }`}
         style={{ marginLeft: 'max(1.5rem, calc((100vw - 1180px) / 2))', marginRight: 'max(1.5rem, calc((100vw - 1180px) / 2))' }}
       >
-        <a href="#top" aria-label="Hynex Bots home">
+        <a href="/" aria-label="Hynex Bots home">
           <Logo />
         </a>
 

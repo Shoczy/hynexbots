@@ -35,12 +35,29 @@ function startFleetServer() {
     // Uptime = share of nodes currently reporting in. Falls back to a healthy
     // figure when no agents are connected yet, so the badge never looks broken.
     const uptimePct = nodes.length ? Math.round((nodesOnline / nodes.length) * 1000) / 10 : 99.9;
+    // Sanitized per-node detail for the public /status page. Only the
+    // operator-chosen node id, health and bot counts — no IPs, no raw secrets.
+    const list = nodes.map((n) => {
+      const nodeBots = Array.isArray(n.bots) ? n.bots : [];
+      return {
+        name: n.id,
+        online: n.online,
+        cpu: typeof n.cpu === 'number' ? Math.round(n.cpu) : null,
+        mem: typeof n.mem === 'number' ? Math.round(n.mem) : null,
+        bots: {
+          total: nodeBots.length,
+          online: nodeBots.filter((b) => (b.status || 'online') === 'online').length,
+        },
+        lastSeen: n.lastSeen || null,
+      };
+    });
     res.json({
       ok: true,
       operational: nodes.length === 0 || nodesOnline > 0,
       nodes: { total: nodes.length, online: nodesOnline },
       bots: { total: bots.length, online: botsOnline },
       uptimePct,
+      list,
       updatedAt: Date.now(),
     });
   });

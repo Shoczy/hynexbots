@@ -28,7 +28,7 @@ export const bots: Bot[] = [
     category: 'Moderation',
     price: '$49',
     blurb: 'Keep your server clean on autopilot with intelligent auto-mod and raid defense.',
-    features: ['Auto-mod & word filters', 'Warns, mutes, tempbans', 'Raid & spam protection', 'Full audit logging'],
+    features: ['Auto-mod & word filters', 'Warns, mutes, tempbans', 'Raid & spam protection', 'Full audit logging', 'Hosting included'],
     accent: 'from-indigo-500/30 to-blue-500/10',
     popular: true,
   },
@@ -38,7 +38,7 @@ export const bots: Bot[] = [
     category: 'Support',
     price: '$39',
     blurb: 'A polished ticket system your staff will actually enjoy using.',
-    features: ['Multi-panel tickets', 'Transcripts & logs', 'Claim & staff stats', 'Custom branding'],
+    features: ['Multi-panel tickets', 'Transcripts & logs', 'Claim & staff stats', 'Custom branding', 'Hosting included'],
     accent: 'from-violet-500/30 to-fuchsia-500/10',
   },
   {
@@ -47,7 +47,7 @@ export const bots: Bot[] = [
     category: 'Economy',
     price: '$59',
     blurb: 'Drive engagement with a deep economy, shop, and leaderboards.',
-    features: ['Currency & shop', 'Gambling & games', 'Daily rewards', 'Global leaderboards'],
+    features: ['Currency & shop', 'Gambling & games', 'Daily rewards', 'Global leaderboards', 'Hosting included'],
     accent: 'from-emerald-500/25 to-teal-500/10',
   },
   {
@@ -56,7 +56,7 @@ export const bots: Bot[] = [
     category: 'Music',
     price: '$45',
     blurb: 'Crystal-clear audio with queues, filters, and playlist support.',
-    features: ['HD audio streaming', 'Queue & filters', 'Playlist support', '24/7 mode'],
+    features: ['HD audio streaming', 'Queue & filters', 'Playlist support', '24/7 mode', 'Hosting included'],
     accent: 'from-sky-500/25 to-cyan-500/10',
   },
 ];
@@ -74,7 +74,7 @@ export const features = [
   },
   {
     title: 'Hosted & monitored',
-    body: 'Optional 24/7 hosting across our VPS fleet with live status monitoring and instant restarts.',
+    body: 'Every bot includes 24/7 hosting on our VPS fleet — live status monitoring and instant restarts, at no extra cost.',
     icon: 'pulse',
   },
   {
@@ -98,58 +98,6 @@ export const stats = [
   { value: 180, suffix: '+', label: 'Happy servers' },
 ];
 
-// ── Hosting add-on plans ─────────────────────────────
-// Customers can self-host the bot they bought, or let us run it on the fleet.
-export type HostingPlan = {
-  id: string;
-  name: string;
-  price: string;
-  period: string;
-  blurb: string;
-  cta: string;
-  featured?: boolean;
-};
-
-export const hostingPlans: HostingPlan[] = [
-  {
-    id: 'self',
-    name: 'Self-host',
-    price: '$0',
-    period: 'included',
-    blurb: 'Run the bot yourself. You get the delivery and setup help — your server, your control.',
-    cta: 'Included with every bot',
-  },
-  {
-    id: 'managed',
-    name: 'Managed',
-    price: '$9',
-    period: '/ month',
-    blurb: 'We host it 24/7 on our VPS fleet with monitoring and automatic restarts.',
-    cta: 'Add managed hosting',
-    featured: true,
-  },
-  {
-    id: 'priority',
-    name: 'Priority',
-    price: '$19',
-    period: '/ month',
-    blurb: 'Everything in Managed, plus priority support, daily backups and a private status page.',
-    cta: 'Go priority',
-  },
-];
-
-// Feature matrix: each row marks which plans include it (by plan id).
-export const hostingMatrix: { label: string; plans: string[] }[] = [
-  { label: 'Source delivery & setup', plans: ['self', 'managed', 'priority'] },
-  { label: 'Lifetime support', plans: ['self', 'managed', 'priority'] },
-  { label: '24/7 hosting on our fleet', plans: ['managed', 'priority'] },
-  { label: 'Live monitoring & auto-restart', plans: ['managed', 'priority'] },
-  { label: 'Uptime reporting', plans: ['managed', 'priority'] },
-  { label: 'Priority support queue', plans: ['priority'] },
-  { label: 'Daily off-site backups', plans: ['priority'] },
-  { label: 'Private status page', plans: ['priority'] },
-];
-
 export const faqs = [
   {
     q: 'How do I actually buy a bot?',
@@ -161,7 +109,7 @@ export const faqs = [
   },
   {
     q: 'Do you host the bots for me?',
-    a: 'Yes. We can host your bot 24/7 across our VPS fleet with live monitoring, automatic restarts, and uptime reporting so you never have to think about it.',
+    a: 'Yes — hosting is included with every bot. We run it 24/7 across our VPS fleet with live monitoring, automatic restarts, and uptime reporting, all in the purchase price. No monthly fees.',
   },
   {
     q: 'What if something breaks later?',

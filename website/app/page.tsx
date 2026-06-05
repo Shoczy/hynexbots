@@ -4,9 +4,7 @@ import { Hero } from '@/components/Hero';
 import { Marquee } from '@/components/Marquee';
 import { Features } from '@/components/Features';
 import { Catalog } from '@/components/Catalog';
-import { Stats } from '@/components/Stats';
 import { FleetStatus } from '@/components/FleetStatus';
-import { Hosting } from '@/components/Hosting';
 import { Process } from '@/components/Process';
 import { CustomCTA } from '@/components/CustomCTA';
 import { FAQ } from '@/components/FAQ';
@@ -22,12 +20,10 @@ export default function Home() {
         <Marquee />
         <Features />
         <Catalog />
-        <Stats />
         <FleetStatus />
-        <Hosting />
         <Process />
-        <CustomCTA />
         <FAQ />
+        <CustomCTA />
       </main>
       <Footer />
     </>
