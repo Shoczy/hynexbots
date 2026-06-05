@@ -10,6 +10,7 @@ import { CommandsEditor } from '@/components/CommandsEditor';
 import { ProcessControl } from '@/components/ProcessControl';
 import { BotLogs } from '@/components/BotLogs';
 import { TeamEditor } from '@/components/TeamEditor';
+import { AnalyticsPanel } from '@/components/AnalyticsPanel';
 import { ModerationEditor } from '@/components/ModerationEditor';
 import { TicketsEditor } from '@/components/TicketsEditor';
 import { EconomyEditor } from '@/components/EconomyEditor';
@@ -27,7 +28,7 @@ import {
 } from '@/lib/settings';
 import { GuildProvider, type Guild } from '@/lib/guildContext';
 
-type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'logs' | 'team';
+type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'analytics' | 'logs' | 'team';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'modules', label: 'Modules' },
@@ -82,7 +83,7 @@ export default function EditorPage() {
     const p = bot.permissions ?? [];
     const prod = TABS.filter((t) => f.tabs.includes(t.id)).map((t) => t.id as Tab);
     const editable = owner ? prod : prod.filter((id) => p.includes(id));
-    const ids: Tab[] = [...editable, 'logs', ...(owner ? (['team'] as Tab[]) : [])];
+    const ids: Tab[] = [...editable, 'analytics', 'logs', ...(owner ? (['team'] as Tab[]) : [])];
     setTab((cur) => (ids.includes(cur) ? cur : ids[0]));
   }, [bot]);
 
@@ -180,6 +181,7 @@ export default function EditorPage() {
   const editableTabs = isOwner ? productTabs : productTabs.filter((t) => perms.includes(t.id));
   const visibleTabs = [
     ...editableTabs,
+    { id: 'analytics' as Tab, label: 'Analytics' },
     { id: 'logs' as Tab, label: 'Logs' },
     ...(isOwner ? [{ id: 'team' as Tab, label: 'Team' }] : []),
   ];
@@ -313,6 +315,12 @@ export default function EditorPage() {
             </motion.div>
           )}
 
+          {tab === 'analytics' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <AnalyticsPanel appId={appId} />
+            </motion.div>
+          )}
+
           {tab === 'team' && isOwner && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <TeamEditor appId={appId} />
@@ -335,8 +343,8 @@ export default function EditorPage() {
         </GuildProvider>
       </main>
 
-      {/* Sticky save bar — config tabs only (Team & Logs manage themselves). */}
-      {tab !== 'team' && tab !== 'logs' && (
+      {/* Sticky save bar — config tabs only (Team, Analytics & Logs are read-only). */}
+      {tab !== 'team' && tab !== 'logs' && tab !== 'analytics' && (
         <div className="sticky bottom-0 z-30 border-t border-ink-700/60 bg-ink-950/80 backdrop-blur-xl">
           <div className="container-content flex items-center justify-between py-4">
             <p className="text-sm text-mist-muted">

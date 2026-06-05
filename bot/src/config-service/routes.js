@@ -207,6 +207,22 @@ function mountConfigRoutes(app) {
     res.json({ ok: true, entries: store.listAudit(access.bot.app_id, 100) });
   });
 
+  // ── Usage analytics (any member) ────────────────────
+  app.get('/api/bots/:appId/stats', dashboardAuth, (req, res) => {
+    const userId = String(req.query.userId || '');
+    const bot = store.accessibleBot(userId, req.params.appId);
+    if (!bot) return res.status(403).json({ ok: false, error: 'no_access' });
+    const days = Math.min(Math.max(parseInt(req.query.days, 10) || 14, 1), 90);
+    const guild = store.getGuild(bot.app_id);
+    res.json({
+      ok: true,
+      usage: store.usageSummary(bot.app_id, days),
+      guild: guild
+        ? { name: guild.guildName, roles: (guild.roles || []).length, channels: (guild.channels || []).length, syncedAt: guild.syncedAt }
+        : null,
+    });
+  });
+
   // ── Process control (dashboard): status, restart, stop ──
   // Only the owner/invited admins of a bot can see or control its process.
   app.get('/api/bots/:appId/process', dashboardAuth, (req, res) => {
@@ -262,6 +278,21 @@ function mountConfigRoutes(app) {
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
     if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
     res.json({ ok: true, settings: store.getConfig(appId) });
+  });
+
+  // ── A customer's running bot reports command usage ──
+  app.post('/api/bot/usage', botLimit, botAuth, (req, res) => {
+    const appId = String(req.body?.appId || '');
+    const commands = req.body?.commands;
+    if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
+    if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
+    if (commands && typeof commands === 'object') {
+      for (const [name, count] of Object.entries(commands)) {
+        const n = parseInt(count, 10);
+        if (name && Number.isFinite(n) && n > 0) store.recordUsage(appId, name, n);
+      }
+    }
+    res.json({ ok: true });
   });
 
   // ── A customer's running bot reports its guild roles & channels ──

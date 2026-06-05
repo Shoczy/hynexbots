@@ -108,6 +108,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_audit_app ON audit_log(app_id, at);
 `);
 
+// Per-command usage counters, bucketed by UTC day. Sold bots batch-report these
+// so customers see what their bot actually gets used for, in the dashboard.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bot_usage (
+    app_id  TEXT NOT NULL,
+    command TEXT NOT NULL,
+    day     TEXT NOT NULL,           -- YYYY-MM-DD (UTC)
+    count   INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (app_id, command, day),
+    FOREIGN KEY (app_id) REFERENCES bots(app_id) ON DELETE CASCADE
+  );
+`);
+
 // ── Default settings schema ───────────────────────────
 function defaultSettings() {
   return {
@@ -499,6 +512,45 @@ function listAudit(appId, limit = 100) {
     .map((r) => ({ actorId: r.actor_id, action: r.action, detail: r.detail, at: r.at }));
 }
 
+// ── Command usage analytics ──────────────────────────
+function recordUsage(appId, command, n = 1) {
+  const day = new Date().toISOString().slice(0, 10);
+  db.prepare(
+    `INSERT INTO bot_usage (app_id, command, day, count) VALUES (?, ?, ?, ?)
+     ON CONFLICT(app_id, command, day) DO UPDATE SET count = count + excluded.count`,
+  ).run(String(appId), String(command).slice(0, 64), day, Math.max(1, n | 0));
+}
+
+/** Aggregate usage over the last `days` days: totals, per-command, per-day. */
+function usageSummary(appId, days = 14) {
+  const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = db
+    .prepare('SELECT command, day, count FROM bot_usage WHERE app_id = ? AND day >= ?')
+    .all(String(appId), since);
+  let total = 0;
+  let totalToday = 0;
+  const perCommand = {};
+  const byDay = {};
+  for (const r of rows) {
+    total += r.count;
+    if (r.day === today) totalToday += r.count;
+    perCommand[r.command] = (perCommand[r.command] || 0) + r.count;
+    byDay[r.day] = (byDay[r.day] || 0) + r.count;
+  }
+  return {
+    days,
+    total,
+    totalToday,
+    perCommand: Object.entries(perCommand)
+      .map(([command, count]) => ({ command, count }))
+      .sort((a, b) => b.count - a.count),
+    byDay: Object.entries(byDay)
+      .map(([day, count]) => ({ day, count }))
+      .sort((a, b) => (a.day < b.day ? -1 : 1)),
+  };
+}
+
 module.exports = {
   db,
   defaultSettings,
@@ -525,4 +577,6 @@ module.exports = {
   setConfig,
   addAudit,
   listAudit,
+  recordUsage,
+  usageSummary,
 };

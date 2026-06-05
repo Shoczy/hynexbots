@@ -39,6 +39,8 @@ module.exports = {
       return interaction.reply({ embeds: [err(DENY_MESSAGE[auth.reason] || 'Not allowed.')], ephemeral: true });
     }
 
+    client.cfg?.recordCommand(interaction.commandName);
+
     try {
       await command.execute(interaction);
     } catch (e) {

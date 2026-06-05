@@ -1,23 +1,11 @@
 'use strict';
 
 /**
- * Hynex config client — drop this into any bot you sell so it can read the
- * settings a customer saves in the dashboard. Zero dependencies (Node 18+).
+ * Hynex config client — bundled copy of examples/bot-config-client/configClient.js.
+ * Lets this bot read the settings a customer saves in the dashboard and report
+ * its guild's roles/channels back. Zero dependencies (Node 18+).
  *
- * Config is keyed by the bot's Discord Application ID, which a running bot
- * already knows (client.application.id) — so there's nothing else to wire up.
- *
- *   const { ConfigClient } = require('./configClient');
- *   client.once('clientReady', async () => {
- *     const cfg = new ConfigClient({
- *       baseUrl: process.env.CONFIG_API_URL,  // http://your-main-host:8787
- *       botKey:  process.env.CONFIG_BOT_KEY,   // matches CONFIG_BOT_KEY/FLEET_SECRET
- *       appId:   client.application.id,        // this bot's own identity
- *     });
- *     await cfg.start();
- *     if (cfg.isModuleEnabled('economy')) enableEconomy();
- *     const prefix = cfg.get('basics.prefix', '!');
- *   });
+ * Config is keyed by the bot's Discord Application ID (client.application.id).
  */
 class ConfigClient {
   constructor({ baseUrl, botKey, appId, intervalSec = 30 }) {
@@ -31,6 +19,7 @@ class ConfigClient {
     this.settings = null;
     this._timer = null;
     this._listeners = new Set();
+    this._usage = new Map(); // command name -> count, flushed to the dashboard
   }
 
   async fetchOnce() {
@@ -44,7 +33,10 @@ class ConfigClient {
   /** Fetch immediately, then poll. Returns the first settings object. */
   async start() {
     await this.refresh();
-    this._timer = setInterval(() => this.refresh().catch(() => {}), this.intervalSec * 1000);
+    this._timer = setInterval(() => {
+      this.refresh().catch(() => {});
+      this.flushUsage().catch(() => {});
+    }, this.intervalSec * 1000);
     if (this._timer.unref) this._timer.unref();
     return this.settings;
   }
@@ -52,6 +44,30 @@ class ConfigClient {
   stop() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
+    this.flushUsage().catch(() => {}); // best-effort final flush
+  }
+
+  /** Count a command invocation; flushed to the dashboard on the poll interval. */
+  recordCommand(name) {
+    if (!name) return;
+    this._usage.set(name, (this._usage.get(name) || 0) + 1);
+  }
+
+  /** Push buffered command counts to the config service. Re-buffers on failure. */
+  async flushUsage() {
+    if (this._usage.size === 0) return;
+    const commands = Object.fromEntries(this._usage);
+    this._usage.clear();
+    try {
+      const res = await fetch(`${this.baseUrl}/api/bot/usage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.botKey}` },
+        body: JSON.stringify({ appId: this.appId, commands }),
+      });
+      if (!res.ok) throw new Error(`usage flush failed: ${res.status}`);
+    } catch {
+      for (const [k, v] of Object.entries(commands)) this._usage.set(k, (this._usage.get(k) || 0) + v);
+    }
   }
 
   async refresh() {
@@ -81,8 +97,6 @@ class ConfigClient {
    * Report this guild's roles & channels to the dashboard so the customer can
    * pick from real lists instead of pasting IDs. Pass a discord.js Guild, or a
    * pre-built payload. Call on `guildCreate`, `roleUpdate`, `channelUpdate`, etc.
-   *
-   *   client.on('roleUpdate', (r) => cfg.syncGuild(r.guild).catch(() => {}));
    */
   async syncGuild(guildOrPayload) {
     const payload = guildOrPayload?.roles?.cache ? ConfigClient.guildPayload(guildOrPayload) : guildOrPayload;

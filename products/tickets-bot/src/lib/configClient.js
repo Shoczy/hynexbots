@@ -19,6 +19,7 @@ class ConfigClient {
     this.settings = null;
     this._timer = null;
     this._listeners = new Set();
+    this._usage = new Map(); // command name -> count, flushed to the dashboard
   }
 
   async fetchOnce() {
@@ -32,7 +33,10 @@ class ConfigClient {
   /** Fetch immediately, then poll. Returns the first settings object. */
   async start() {
     await this.refresh();
-    this._timer = setInterval(() => this.refresh().catch(() => {}), this.intervalSec * 1000);
+    this._timer = setInterval(() => {
+      this.refresh().catch(() => {});
+      this.flushUsage().catch(() => {});
+    }, this.intervalSec * 1000);
     if (this._timer.unref) this._timer.unref();
     return this.settings;
   }
@@ -40,6 +44,30 @@ class ConfigClient {
   stop() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
+    this.flushUsage().catch(() => {}); // best-effort final flush
+  }
+
+  /** Count a command invocation; flushed to the dashboard on the poll interval. */
+  recordCommand(name) {
+    if (!name) return;
+    this._usage.set(name, (this._usage.get(name) || 0) + 1);
+  }
+
+  /** Push buffered command counts to the config service. Re-buffers on failure. */
+  async flushUsage() {
+    if (this._usage.size === 0) return;
+    const commands = Object.fromEntries(this._usage);
+    this._usage.clear();
+    try {
+      const res = await fetch(`${this.baseUrl}/api/bot/usage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.botKey}` },
+        body: JSON.stringify({ appId: this.appId, commands }),
+      });
+      if (!res.ok) throw new Error(`usage flush failed: ${res.status}`);
+    } catch {
+      for (const [k, v] of Object.entries(commands)) this._usage.set(k, (this._usage.get(k) || 0) + v);
+    }
   }
 
   async refresh() {

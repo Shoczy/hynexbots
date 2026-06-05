@@ -75,6 +75,17 @@ export const configApi = {
   getAudit(appId: string, userId: string) {
     return call(`/api/bots/${encodeURIComponent(appId)}/audit?userId=${encodeURIComponent(userId)}`);
   },
+  getStats(appId: string, userId: string, days = 14) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/stats?userId=${encodeURIComponent(userId)}&days=${days}`);
+  },
+};
+
+export type UsageStats = {
+  days: number;
+  total: number;
+  totalToday: number;
+  perCommand: { command: string; count: number }[];
+  byDay: { day: string; count: number }[];
 };
 
 export type AuditEntry = {
