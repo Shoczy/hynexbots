@@ -2,6 +2,7 @@ const express = require('express');
 const config = require('../config');
 const fleetStore = require('./store');
 const { mountConfigRoutes } = require('../config-service/routes');
+const { rateLimit } = require('../config-service/rateLimit');
 
 /**
  * Heartbeat receiver. Each VPS agent POSTs /heartbeat with a shared-secret
@@ -10,6 +11,11 @@ const { mountConfigRoutes } = require('../config-service/routes');
  */
 function startFleetServer() {
   const app = express();
+  // Caddy (or any reverse proxy) runs on localhost in front of us, so trust the
+  // loopback hop to read the real client IP from X-Forwarded-For — needed for
+  // per-IP rate limiting. Only localhost is trusted, so external clients can't
+  // spoof the header by setting it themselves.
+  app.set('trust proxy', 'loopback');
   app.use(express.json({ limit: '256kb' }));
 
   // Simple bearer-secret auth.
@@ -26,7 +32,9 @@ function startFleetServer() {
 
   // Public, sanitized status for the marketing website. No auth, no hostnames or
   // secrets — just aggregate counts the storefront can show as a live badge.
-  app.get('/public/status', (_req, res) => {
+  // Unauthenticated, so throttle per-IP to blunt scraping / abuse.
+  const publicLimit = rateLimit({ windowMs: 60_000, max: 60 });
+  app.get('/public/status', publicLimit, (_req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     const nodes = fleetStore.all();
     const nodesOnline = nodes.filter((n) => n.online).length;

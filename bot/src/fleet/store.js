@@ -17,7 +17,14 @@ const INCIDENTS_FILE = process.env.HYNEX_INCIDENTS_PATH || path.join(DATA_DIR, '
 const MAX_INCIDENTS = 200;
 
 const nodeOnline = new Map(); // id -> last known online state (for edge detection)
+const transitionListeners = new Set(); // ({ node, online, at }) => void
 let incidents = loadIncidents();
+
+/** Subscribe to node online↔offline transitions. Returns an unsubscribe fn. */
+function onTransition(fn) {
+  transitionListeners.add(fn);
+  return () => transitionListeners.delete(fn);
+}
 
 function loadIncidents() {
   try {
@@ -60,6 +67,13 @@ function transition(id, online, at) {
   if (prev === undefined) return; // first sighting: set a baseline, don't log
   if (online) resolveIncident(id, at);
   else openIncident(id, at);
+  for (const fn of transitionListeners) {
+    try {
+      fn({ node: id, online, at });
+    } catch (err) {
+      console.error('fleet transition listener error:', err?.message || err);
+    }
+  }
 }
 
 function record(report) {
@@ -99,4 +113,4 @@ function recentIncidents(limit = 20) {
   }));
 }
 
-module.exports = { record, all, isOnline, evaluate, recentIncidents };
+module.exports = { record, all, isOnline, evaluate, recentIncidents, onTransition };

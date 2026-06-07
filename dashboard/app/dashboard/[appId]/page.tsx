@@ -11,6 +11,7 @@ import { ProcessControl } from '@/components/ProcessControl';
 import { BotLogs } from '@/components/BotLogs';
 import { TeamEditor } from '@/components/TeamEditor';
 import { AnalyticsPanel } from '@/components/AnalyticsPanel';
+import { LicensePanel } from '@/components/LicensePanel';
 import { ModerationEditor } from '@/components/ModerationEditor';
 import { TicketsEditor } from '@/components/TicketsEditor';
 import { EconomyEditor } from '@/components/EconomyEditor';
@@ -28,7 +29,7 @@ import {
 } from '@/lib/settings';
 import { GuildProvider, type Guild } from '@/lib/guildContext';
 
-type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'analytics' | 'logs' | 'team';
+type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'modules', label: 'Modules' },
@@ -83,7 +84,7 @@ export default function EditorPage() {
     const p = bot.permissions ?? [];
     const prod = TABS.filter((t) => f.tabs.includes(t.id)).map((t) => t.id as Tab);
     const editable = owner ? prod : prod.filter((id) => p.includes(id));
-    const ids: Tab[] = [...editable, 'analytics', 'logs', ...(owner ? (['team'] as Tab[]) : [])];
+    const ids: Tab[] = [...editable, 'analytics', 'logs', ...(owner ? (['team', 'license'] as Tab[]) : [])];
     setTab((cur) => (ids.includes(cur) ? cur : ids[0]));
   }, [bot]);
 
@@ -183,7 +184,7 @@ export default function EditorPage() {
     ...editableTabs,
     { id: 'analytics' as Tab, label: 'Analytics' },
     { id: 'logs' as Tab, label: 'Logs' },
-    ...(isOwner ? [{ id: 'team' as Tab, label: 'Team' }] : []),
+    ...(isOwner ? [{ id: 'team' as Tab, label: 'Team' }, { id: 'license' as Tab, label: 'License' }] : []),
   ];
   const visibleModules = MODULES.filter((m) => features.modules.includes(m.key));
   const canControlProcess = isOwner || perms.includes('process');
@@ -340,6 +341,12 @@ export default function EditorPage() {
             </motion.div>
           )}
 
+          {tab === 'license' && isOwner && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <LicensePanel appId={appId} />
+            </motion.div>
+          )}
+
           {tab === 'commands' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <CommandsEditor
@@ -356,8 +363,8 @@ export default function EditorPage() {
         </GuildProvider>
       </main>
 
-      {/* Sticky save bar — config tabs only (Team, Analytics & Logs are read-only). */}
-      {tab !== 'team' && tab !== 'logs' && tab !== 'analytics' && (
+      {/* Sticky save bar — config tabs only (Team, License, Analytics & Logs are read-only). */}
+      {tab !== 'team' && tab !== 'logs' && tab !== 'analytics' && tab !== 'license' && (
         <div className="sticky bottom-0 z-30 border-t border-ink-700/60 bg-ink-950/80 backdrop-blur-xl">
           <div className="container-content flex items-center justify-between py-4">
             <p className="text-sm text-mist-muted">

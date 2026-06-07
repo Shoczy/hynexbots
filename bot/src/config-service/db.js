@@ -139,6 +139,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_health_app ON bot_health(app_id, at);
 `);
 
+// Per-bot outage log: each time a registered bot stops phoning home (and later
+// returns) the health monitor opens/closes an incident here, giving customers a
+// downtime history for their own bot — the per-bot analogue of fleet incidents.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bot_incidents (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    app_id      TEXT NOT NULL,
+    started_at  INTEGER NOT NULL,
+    resolved_at INTEGER,                   -- null while ongoing
+    FOREIGN KEY (app_id) REFERENCES bots(app_id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_bot_incidents ON bot_incidents(app_id, started_at);
+`);
+
 // ── Default settings schema ───────────────────────────
 function defaultSettings() {
   return {
@@ -336,6 +350,31 @@ function registerBot({ appId, name, type, ownerId = null, withKey = true, featur
 
 function getBot(appId) {
   return db.prepare('SELECT * FROM bots WHERE app_id = ?').get(String(appId));
+}
+
+/** Issue a fresh backup/transfer key, invalidating the old one. Returns the new key. */
+function regenerateKey(appId) {
+  if (!getBot(appId)) return null;
+  let key = generateKey();
+  while (db.prepare('SELECT 1 FROM bots WHERE license_key = ?').get(key)) key = generateKey();
+  db.prepare('UPDATE bots SET license_key = ? WHERE app_id = ?').run(key, String(appId));
+  return key;
+}
+
+/**
+ * Hand ownership of a bot to another Discord account. The new owner is removed
+ * from the team list (they're the owner now, not a member). Returns the updated
+ * bot, or null if it doesn't exist.
+ */
+function transferOwner(appId, newOwnerId) {
+  if (!getBot(appId)) return null;
+  db.prepare('UPDATE bots SET owner_id = ?, claimed_at = ? WHERE app_id = ?').run(
+    String(newOwnerId),
+    Date.now(),
+    String(appId),
+  );
+  removeMember(appId, newOwnerId);
+  return getBot(appId);
 }
 
 function getBotByKey(key) {
@@ -624,6 +663,48 @@ function healthSummary(appId, days = 14) {
   return { days, uptimePct, lastSeen, byDay };
 }
 
+// ── Per-bot outage incidents (driven by the health monitor) ──
+/** Most recent contact time for a bot, or null if it never phoned home. */
+function botLastSeen(appId) {
+  const row = db.prepare('SELECT MAX(at) AS at FROM bot_health WHERE app_id = ?').get(String(appId));
+  return row?.at || null;
+}
+
+/** Active bots with their last-seen time — the monitor's work list. */
+function listActiveBotsHealth() {
+  return db
+    .prepare(
+      `SELECT b.app_id AS appId,
+              (SELECT MAX(at) FROM bot_health h WHERE h.app_id = b.app_id) AS lastSeen
+       FROM bots b WHERE b.status = 'active'`,
+    )
+    .all();
+}
+
+/** Open an outage incident (no-op if one is already open for this bot). */
+function openBotIncident(appId, at) {
+  const open = db.prepare('SELECT 1 FROM bot_incidents WHERE app_id = ? AND resolved_at IS NULL').get(String(appId));
+  if (open) return;
+  db.prepare('INSERT INTO bot_incidents (app_id, started_at, resolved_at) VALUES (?, ?, NULL)').run(String(appId), at);
+}
+
+/** Resolve the open outage incident for a bot, if any. */
+function resolveBotIncident(appId, at) {
+  db.prepare('UPDATE bot_incidents SET resolved_at = ? WHERE app_id = ? AND resolved_at IS NULL').run(at, String(appId));
+}
+
+function listBotIncidents(appId, limit = 20) {
+  return db
+    .prepare('SELECT started_at, resolved_at FROM bot_incidents WHERE app_id = ? ORDER BY started_at DESC LIMIT ?')
+    .all(String(appId), Math.min(Math.max(1, limit | 0), 100))
+    .map((r) => ({
+      startedAt: r.started_at,
+      resolvedAt: r.resolved_at,
+      ongoing: r.resolved_at == null,
+      durationMs: (r.resolved_at || Date.now()) - r.started_at,
+    }));
+}
+
 module.exports = {
   db,
   defaultSettings,
@@ -637,6 +718,8 @@ module.exports = {
   deleteProcess,
   registerBot,
   getBot,
+  regenerateKey,
+  transferOwner,
   getBotByKey,
   redeemKey,
   listBotsForUser,
@@ -654,4 +737,9 @@ module.exports = {
   usageSummary,
   recordHeartbeat,
   healthSummary,
+  botLastSeen,
+  listActiveBotsHealth,
+  openBotIncident,
+  resolveBotIncident,
+  listBotIncidents,
 };

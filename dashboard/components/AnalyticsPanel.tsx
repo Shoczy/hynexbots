@@ -2,9 +2,21 @@
 
 import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui';
-import type { UsageStats, HealthStats } from '@/lib/configApi';
+import type { UsageStats, HealthStats, BotIncident } from '@/lib/configApi';
 
 type Guild = { name: string; roles: number; channels: number; syncedAt: number } | null;
+
+function formatDuration(ms: number): string {
+  const mins = Math.max(1, Math.round(ms / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return mins % 60 ? `${hrs}h ${mins % 60}m` : `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d ${hrs % 24}h`;
+}
+
+function formatWhen(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 function relativeTime(ts: number | null): string {
   if (!ts) return 'never';
@@ -20,6 +32,7 @@ function relativeTime(ts: number | null): string {
 export function AnalyticsPanel({ appId }: { appId: string }) {
   const [usage, setUsage] = useState<UsageStats | null>(null);
   const [health, setHealth] = useState<HealthStats | null>(null);
+  const [incidents, setIncidents] = useState<BotIncident[]>([]);
   const [guild, setGuild] = useState<Guild>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -32,6 +45,7 @@ export function AnalyticsPanel({ appId }: { appId: string }) {
         if (data.ok) {
           setUsage(data.usage);
           setHealth(data.health ?? null);
+          setIncidents(data.incidents ?? []);
           setGuild(data.guild ?? null);
         } else {
           setFailed(true);
@@ -67,6 +81,8 @@ export function AnalyticsPanel({ appId }: { appId: string }) {
       </div>
 
       {health && <UptimeCard health={health} />}
+
+      {incidents.length > 0 && <IncidentList incidents={incidents} />}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         <Stat label="Commands today" value={usage.totalToday} />
@@ -161,6 +177,40 @@ function UptimeCard({ health }: { health: HealthStats }) {
       <div className="mt-2 flex justify-between text-[10px] uppercase tracking-wider text-mist-faint">
         <span>{health.byDay[0]?.day}</span>
         <span>Today</span>
+      </div>
+    </div>
+  );
+}
+
+function IncidentList({ incidents }: { incidents: BotIncident[] }) {
+  return (
+    <div className="card p-5">
+      <div className="mb-3 text-sm font-medium text-mist">Incident history</div>
+      <div className="space-y-2">
+        {incidents.map((inc) => (
+          <div
+            key={inc.startedAt}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink-800 bg-ink-900/40 px-3 py-2.5"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className={`h-2 w-2 rounded-full ${inc.ongoing ? 'bg-rose-400' : 'bg-mist-faint'}`} />
+              <div className="text-xs text-mist-muted">
+                {inc.ongoing ? 'Offline since ' : 'Offline '}
+                {formatWhen(inc.startedAt)}
+                {inc.resolvedAt ? ` → ${formatWhen(inc.resolvedAt)}` : ''}
+              </div>
+            </div>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                inc.ongoing
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+                  : 'border-ink-600 bg-ink-800 text-mist-faint'
+              }`}
+            >
+              {inc.ongoing ? `Ongoing · ${formatDuration(inc.durationMs)}` : formatDuration(inc.durationMs)}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );

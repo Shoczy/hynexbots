@@ -81,6 +81,28 @@ export const configApi = {
   getStats(appId: string, userId: string, days = 14) {
     return call(`/api/bots/${encodeURIComponent(appId)}/stats?userId=${encodeURIComponent(userId)}&days=${days}`);
   },
+  getLicense(appId: string, userId: string) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/license?userId=${encodeURIComponent(userId)}`);
+  },
+  regenerateKey(appId: string, userId: string) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/license/regenerate`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  },
+  transferBot(appId: string, userId: string, newOwnerId: string) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/license/transfer`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, newOwnerId }),
+    });
+  },
+};
+
+export type LicenseInfo = {
+  key: string | null;
+  status: string;
+  registeredAt: number;
+  claimedAt: number | null;
 };
 
 export type UsageStats = {
@@ -96,6 +118,13 @@ export type HealthStats = {
   uptimePct: number | null;
   lastSeen: number | null;
   byDay: { day: string; pct: number | null }[];
+};
+
+export type BotIncident = {
+  startedAt: number;
+  resolvedAt: number | null;
+  ongoing: boolean;
+  durationMs: number;
 };
 
 export type Order = {

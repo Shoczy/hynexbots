@@ -231,6 +231,41 @@ function mountConfigRoutes(app) {
     res.json({ ok: true, entries: store.listAudit(access.bot.app_id, 100) });
   });
 
+  // ── License management (owner only) ─────────────────
+  app.get('/api/bots/:appId/license', dashboardAuth, (req, res) => {
+    const userId = String(req.query.userId || '');
+    const access = store.memberAccess(userId, req.params.appId);
+    if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
+    if (!access.isOwner) return res.status(403).json({ ok: false, error: 'owner_only' });
+    const b = access.bot;
+    res.json({
+      ok: true,
+      license: { key: b.license_key, status: b.status, registeredAt: b.created_at, claimedAt: b.claimed_at },
+    });
+  });
+
+  app.post('/api/bots/:appId/license/regenerate', writeLimit, dashboardAuth, (req, res) => {
+    const { userId } = req.body || {};
+    const bot = store.getBot(req.params.appId);
+    if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
+    const key = store.regenerateKey(bot.app_id);
+    store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'license.regenerate', detail: 'issued a new backup key' });
+    res.json({ ok: true, key });
+  });
+
+  app.post('/api/bots/:appId/license/transfer', writeLimit, dashboardAuth, (req, res) => {
+    const { userId, newOwnerId } = req.body || {};
+    const bot = store.getBot(req.params.appId);
+    if (!bot || bot.owner_id !== userId) return res.status(403).json({ ok: false, error: 'owner_only' });
+    if (!/^\d{17,20}$/.test(String(newOwnerId || ''))) {
+      return res.status(400).json({ ok: false, error: 'invalid_user_id' });
+    }
+    if (String(newOwnerId) === String(bot.owner_id)) return res.status(400).json({ ok: false, error: 'already_owner' });
+    store.transferOwner(bot.app_id, String(newOwnerId));
+    store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'license.transfer', detail: `transferred ownership to ${newOwnerId}` });
+    res.json({ ok: true });
+  });
+
   // ── Usage analytics (any member) ────────────────────
   app.get('/api/bots/:appId/stats', dashboardAuth, (req, res) => {
     const userId = String(req.query.userId || '');
@@ -242,6 +277,7 @@ function mountConfigRoutes(app) {
       ok: true,
       usage: store.usageSummary(bot.app_id, days),
       health: store.healthSummary(bot.app_id, days),
+      incidents: store.listBotIncidents(bot.app_id, 20),
       guild: guild
         ? { name: guild.guildName, roles: (guild.roles || []).length, channels: (guild.channels || []).length, syncedAt: guild.syncedAt }
         : null,

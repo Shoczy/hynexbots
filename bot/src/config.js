@@ -23,6 +23,9 @@ const config = {
     port: parseInt(process.env.FLEET_PORT || '8787', 10),
     secret: process.env.FLEET_SECRET || 'change-me',
     offlineAfterMin: parseInt(process.env.FLEET_OFFLINE_AFTER_MIN || '2', 10),
+    // Channel where node/bot up·down alerts are posted (optional). Right-click a
+    // staff channel → Copy ID. Unset = no channel alerts (owners are still DMed).
+    alertChannelId: process.env.FLEET_ALERT_CHANNEL_ID || null,
   },
 
   api: {

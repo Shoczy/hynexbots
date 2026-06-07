@@ -47,9 +47,11 @@ nssm start HynexBot
 
 ## Database backups
 
-`hynex.db` (licenses, customer config, team members, encrypted tokens) is
-snapshotted automatically: one backup on boot, then every 24h, into
-`bot/data/backups/` (last `DB_BACKUP_KEEP` kept). Manual snapshot:
+All persistent state is snapshotted automatically — `hynex.db` (licenses,
+customer config, team members, encrypted tokens) plus the JSON stores
+`store.json` (tickets + orders/invoices) and `incidents.json` (fleet incident
+history). One backup on boot, then every 24h, into `bot/data/backups/` (last
+`DB_BACKUP_KEEP` of each kept). Manual snapshot:
 
 ```bash
 cd bot && npm run backup

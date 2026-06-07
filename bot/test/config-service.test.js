@@ -106,3 +106,43 @@ test('health: a heartbeat reports 100% uptime and a recent last-seen', () => {
   store.recordHeartbeat(APP);
   assert.equal(store.healthSummary(APP, 14).uptimePct, 100);
 });
+
+test('regenerateKey rotates the backup key', () => {
+  const APP3 = '100000000000000003';
+  const reg = store.registerBot({ appId: APP3, name: 'Rotate', type: 'music', ownerId: OWNER, withKey: true });
+  const newKey = store.regenerateKey(APP3);
+  assert.notEqual(newKey, reg.key, 'a fresh key is issued');
+  assert.equal(store.getBotByKey(reg.key), undefined, 'old key stops working');
+  assert.equal(store.getBotByKey(newKey).app_id, APP3, 'new key resolves the bot');
+});
+
+test('transferOwner hands the bot over and clears membership', () => {
+  const APP4 = '100000000000000004';
+  store.registerBot({ appId: APP4, name: 'Xfer', type: 'tickets', ownerId: OWNER, withKey: false });
+  const NEW = '200000000000000050';
+  store.addMember(APP4, NEW, ['basics']); // new owner was previously a member
+  const updated = store.transferOwner(APP4, NEW);
+  assert.equal(updated.owner_id, NEW);
+  assert.equal(store.memberAccess(NEW, APP4).isOwner, true);
+  assert.equal(store.listMembers(APP4).find((m) => m.userId === NEW), undefined, 'new owner dropped from team');
+  assert.equal(store.memberAccess(OWNER, APP4), null, 'previous owner loses access');
+});
+
+test('bot incidents open (idempotently), resolve, and list newest-first', () => {
+  const APP5 = '100000000000000005';
+  store.registerBot({ appId: APP5, name: 'Inc', type: 'moderation', ownerId: OWNER, withKey: false });
+  store.openBotIncident(APP5, 1000);
+  store.openBotIncident(APP5, 1500); // no-op while one is already open
+  assert.equal(store.listBotIncidents(APP5).length, 1);
+  assert.equal(store.listBotIncidents(APP5)[0].ongoing, true);
+
+  store.resolveBotIncident(APP5, 2000);
+  const resolved = store.listBotIncidents(APP5)[0];
+  assert.equal(resolved.ongoing, false);
+  assert.equal(resolved.resolvedAt, 2000);
+  assert.equal(resolved.durationMs, 1000);
+
+  store.openBotIncident(APP5, 3000); // a new outage is a separate incident
+  assert.equal(store.listBotIncidents(APP5).length, 2);
+  assert.equal(store.listBotIncidents(APP5)[0].startedAt, 3000, 'newest first');
+});

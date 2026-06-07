@@ -2,6 +2,8 @@ const { ActivityType } = require('discord.js');
 const config = require('../config');
 const launcher = require('../launcher/manager');
 const store = require('../config-service/db');
+const fleetStore = require('../fleet/store');
+const health = require('../config-service/health');
 
 module.exports = {
   name: 'clientReady',
@@ -28,6 +30,46 @@ module.exports = {
         console.error('Failed to notify owner of crash:', err?.message || err);
       }
     });
+
+    // ── Downtime alerts ────────────────────────────────
+    // Post node/bot up·down events to a staff channel (if configured) and DM the
+    // affected bot's owner, so an outage is noticed without watching dashboards.
+    async function postAlert(content) {
+      if (!config.fleet.alertChannelId) return;
+      try {
+        const ch = await client.channels.fetch(config.fleet.alertChannelId);
+        if (ch?.isTextBased?.()) await ch.send({ content, allowedMentions: { parse: [] } });
+      } catch (err) {
+        console.error('Failed to post fleet alert:', err?.message || err);
+      }
+    }
+
+    // VPS node up/down → staff channel only (nodes aren't owned by a customer).
+    fleetStore.onTransition(({ node, online }) => {
+      postAlert(online ? `🟢 Node **${node}** has recovered.` : `🔴 Node **${node}** has gone **offline**.`);
+    });
+
+    // Customer bot up/down → staff channel + a DM to the bot's owner.
+    health.onTransition(async ({ appId, online }) => {
+      const bot = store.getBot(appId);
+      const label = bot?.name || appId;
+      postAlert(online ? `🟢 Bot **${label}** is back online.` : `🔴 Bot **${label}** appears to be **offline**.`);
+      if (!bot?.owner_id) return;
+      try {
+        const user = await client.users.fetch(bot.owner_id);
+        await user.send(
+          online
+            ? `🟢 Good news — your bot **${label}** is back online.`
+            : `🔴 Heads up: your bot **${label}** has stopped responding and looks offline. ` +
+                `Check the **Analytics** tab in your dashboard for its uptime and recent incidents.`,
+        );
+      } catch {
+        /* owner has DMs closed — the channel alert still fired */
+      }
+    });
+
+    // Start watching customer-bot heartbeats for outages.
+    health.start();
 
     // Bring previously-registered managed bots back online (the config service
     // is already listening by now — started in index.js before login).
