@@ -93,6 +93,9 @@ module.exports = {
       if (interaction.isButton() && interaction.customId === 'ticket_close') {
         return tickets.closeTicket(interaction);
       }
+      if (interaction.isButton() && interaction.customId === 'order_confirm_payment') {
+        return tickets.confirmPayment(interaction);
+      }
       if (interaction.isButton() && interaction.customId.startsWith('order_status:')) {
         const status = interaction.customId.slice('order_status:'.length);
         return tickets.setOrderStatus(interaction, status);

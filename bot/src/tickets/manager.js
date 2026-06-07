@@ -31,6 +31,22 @@ function orderControls() {
   );
 }
 
+/**
+ * Buyer-facing payment confirmation, shown on purchase tickets. For
+ * crypto/manual transfers there's no payment gateway callback, so the buyer
+ * presses this once they've sent payment — it flips the order to "paid" and
+ * fires the automated delivery message, no staff action required.
+ */
+function paymentControls() {
+  return new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('order_confirm_payment')
+      .setLabel("I've sent payment")
+      .setEmoji('💸')
+      .setStyle(ButtonStyle.Success),
+  );
+}
+
 function isStaff(interaction) {
   if (config.tickets.staffRoleId && interaction.member?.roles?.cache?.has(config.tickets.staffRoleId)) return true;
   return Boolean(interaction.member?.permissions?.has(PermissionFlagsBits.ManageGuild));
@@ -165,7 +181,10 @@ async function createTicket(interaction, opts) {
     );
   }
   children.push(sep());
-  if (order) children.push(orderControls());
+  if (order) {
+    children.push(paymentControls());
+    children.push(orderControls());
+  }
   children.push(ticketControls());
 
   const view = container(config.brand.color, children);
@@ -198,6 +217,59 @@ async function claimTicket(interaction) {
   await interaction.reply({ flags: V2, components: [view] });
 }
 
+/**
+ * Automated "payment received → delivery underway" message. Posted whenever an
+ * order moves to `paid` (whether the buyer self-confirms or staff marks it), so
+ * the customer immediately gets next steps without anyone typing them out.
+ */
+function deliveryView(order, actorId) {
+  const staffPing = config.tickets.staffRoleId ? ` <@&${config.tickets.staffRoleId}>` : '';
+  return container(config.brand.success, [
+    text(`${orders.STATUS_META.paid.emoji} Payment confirmed for \`${order.id}\` by <@${actorId}>.${staffPing}`),
+    sep(),
+    text(
+      `### ✅ Payment received — delivery underway\n` +
+        `Thanks <@${order.ownerId}>! Your payment is recorded. Our team will register your bot now, and ` +
+        `you'll get a DM with your dashboard link and backup key the moment it's ready.\n\n` +
+        `**Customize your bot here:** ${config.dashboardUrl}/dashboard`,
+    ),
+  ]);
+}
+
+/** Reply marking an order paid + the automated delivery message (pings staff). */
+async function announcePaid(interaction, order, actorId) {
+  await interaction.reply({
+    flags: V2,
+    components: [deliveryView(order, actorId)],
+    allowedMentions: { roles: config.tickets.staffRoleId ? [config.tickets.staffRoleId] : [] },
+  });
+}
+
+/**
+ * Buyer self-service: confirm they've sent a crypto/manual payment. Flips the
+ * order to paid and triggers automated delivery — no staff step required.
+ */
+async function confirmPayment(interaction) {
+  const data = store.read();
+  const ticket = data.tickets[interaction.channel.id];
+  const order = orders.getByChannel(interaction.channel.id);
+  if (!order) {
+    return interaction.reply({ content: 'No order is attached to this ticket.', ephemeral: true });
+  }
+  const isOwner = ticket?.ownerId === interaction.user.id;
+  if (!isOwner && !isStaff(interaction)) {
+    return interaction.reply({ content: 'Only the buyer can confirm their payment.', ephemeral: true });
+  }
+  if (order.status === 'paid' || order.status === 'delivered') {
+    return interaction.reply({ content: `This order is already marked **${order.status}**.`, ephemeral: true });
+  }
+  if (order.status === 'cancelled') {
+    return interaction.reply({ content: 'This order was cancelled — ask staff to reopen it.', ephemeral: true });
+  }
+  orders.setStatus(interaction.channel.id, 'paid', interaction.user.id);
+  await announcePaid(interaction, order, interaction.user.id);
+}
+
 /** Staff moves a purchase order along its pipeline from inside the ticket. */
 async function setOrderStatus(interaction, status) {
   if (!isStaff(interaction)) {
@@ -207,6 +279,8 @@ async function setOrderStatus(interaction, status) {
   if (!order) {
     return interaction.reply({ content: 'No order is attached to this ticket.', ephemeral: true });
   }
+  // Marking paid fires the same automated delivery message as buyer self-confirm.
+  if (status === 'paid') return announcePaid(interaction, order, interaction.user.id);
   const meta = orders.STATUS_META[status];
   const tone = status === 'cancelled' ? config.brand.danger : status === 'delivered' ? config.brand.success : config.brand.color;
   const view = container(tone, [
@@ -268,4 +342,4 @@ async function closeTicket(interaction) {
   setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
 }
 
-module.exports = { createTicket, claimTicket, closeTicket, setOrderStatus, ticketControls };
+module.exports = { createTicket, claimTicket, closeTicket, setOrderStatus, confirmPayment, ticketControls };

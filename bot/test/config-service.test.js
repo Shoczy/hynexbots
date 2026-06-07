@@ -88,3 +88,21 @@ test('redeemKey claims an unowned bot', () => {
   // Re-redeem by a different user fails.
   assert.equal(store.redeemKey(reg.key, '200000000000000098').ok, false);
 });
+
+test('health: no heartbeats means no uptime data', () => {
+  const s = store.healthSummary(APP, 14);
+  assert.equal(s.uptimePct, null);
+  assert.equal(s.lastSeen, null);
+  assert.deepEqual(s.byDay, []);
+});
+
+test('health: a heartbeat reports 100% uptime and a recent last-seen', () => {
+  store.recordHeartbeat(APP);
+  const s = store.healthSummary(APP, 14);
+  assert.equal(s.uptimePct, 100, 'just-seen bot is fully up');
+  assert.ok(typeof s.lastSeen === 'number' && Date.now() - s.lastSeen < 5000, 'last seen is recent');
+  assert.ok(s.byDay.length >= 1, 'has a per-day series');
+  // Idempotent within a 5-minute slot: a second beat doesn't double-count.
+  store.recordHeartbeat(APP);
+  assert.equal(store.healthSummary(APP, 14).uptimePct, 100);
+});

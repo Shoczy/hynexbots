@@ -8,6 +8,7 @@ const { EDIT_TABS, ALL_PERMISSIONS } = require('./permissions');
 const { rateLimit } = require('./rateLimit');
 const { inviteUrl } = require('./invite');
 const launcher = require('../launcher/manager');
+const orders = require('../tickets/orders');
 
 /** Top-level config sections that differ between two settings objects. */
 function changedSections(before, after) {
@@ -111,6 +112,27 @@ function mountConfigRoutes(app) {
     if (!userId) return res.status(400).json({ ok: false, error: 'userId required' });
     const bots = store.listBotsForUser(userId).map((b) => botView(b, userId));
     res.json({ ok: true, bots });
+  });
+
+  // ── Billing: a customer's purchase history + licenses ──
+  // Orders come from the ticket store (keyed by the buyer's Discord id, which is
+  // the same id we log in with). Licenses are the bots they own — metadata only,
+  // never the backup key.
+  app.get('/api/bots/me/billing', dashboardAuth, (req, res) => {
+    const userId = String(req.query.userId || '');
+    if (!userId) return res.status(400).json({ ok: false, error: 'userId required' });
+    const licenses = store
+      .listBotsForUser(userId)
+      .filter((b) => b.owner_id === userId)
+      .map((b) => ({
+        appId: b.app_id,
+        name: b.name,
+        status: b.status,
+        registeredAt: b.created_at,
+        claimedAt: b.claimed_at,
+        ...typeMeta(b.type),
+      }));
+    res.json({ ok: true, orders: orders.listForOwner(userId), licenses });
   });
 
   // ── Get a bot's config ──────────────────────────────
@@ -219,6 +241,7 @@ function mountConfigRoutes(app) {
     res.json({
       ok: true,
       usage: store.usageSummary(bot.app_id, days),
+      health: store.healthSummary(bot.app_id, days),
       guild: guild
         ? { name: guild.guildName, roles: (guild.roles || []).length, channels: (guild.channels || []).length, syncedAt: guild.syncedAt }
         : null,
@@ -279,6 +302,8 @@ function mountConfigRoutes(app) {
     const appId = String(req.query.appId || '');
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
     if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
+    // The bot polls this on an interval, so it doubles as an uptime heartbeat.
+    store.recordHeartbeat(appId);
     res.json({ ok: true, settings: store.getConfig(appId) });
   });
 
@@ -288,6 +313,7 @@ function mountConfigRoutes(app) {
     const commands = req.body?.commands;
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
     if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
+    store.recordHeartbeat(appId);
     if (commands && typeof commands === 'object') {
       for (const [name, count] of Object.entries(commands)) {
         const n = parseInt(count, 10);
@@ -303,6 +329,7 @@ function mountConfigRoutes(app) {
     const appId = String(req.body?.appId || '');
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
     if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
+    store.recordHeartbeat(appId);
     store.setGuild(appId, sanitizeGuildSync(req.body));
     res.json({ ok: true });
   });

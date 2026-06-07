@@ -12,12 +12,21 @@ type Node = {
   lastSeen: number | null;
 };
 
+type Incident = {
+  node: string;
+  startedAt: number;
+  resolvedAt: number | null;
+  ongoing: boolean;
+  durationMs: number;
+};
+
 type FleetData = {
   operational: boolean;
   nodes: { total: number; online: number };
   bots: { total: number; online: number };
   uptimePct: number;
   list: Node[];
+  incidents?: Incident[];
   updatedAt: number;
 };
 
@@ -137,6 +146,24 @@ export function StatusBoard() {
           )}
         </div>
 
+        {/* Incident history */}
+        {live && (
+          <div className="mt-12">
+            <h2 className="mb-4 text-xs font-medium uppercase tracking-[0.18em] text-mist-faint">
+              Incident history
+            </h2>
+            {live.incidents && live.incidents.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {live.incidents.map((inc) => (
+                  <IncidentRow key={`${inc.node}-${inc.startedAt}`} incident={inc} />
+                ))}
+              </div>
+            ) : (
+              <EmptyCard>No incidents recorded. Every node has stayed healthy. 🎉</EmptyCard>
+            )}
+          </div>
+        )}
+
         <p className="mt-8 text-center text-xs text-mist-faint">
           This page refreshes automatically every 15 seconds.
         </p>
@@ -181,6 +208,53 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="text-right">
       <div className="font-display text-base font-semibold text-mist">{value}</div>
       <div className="text-[10px] uppercase tracking-wider text-mist-faint">{label}</div>
+    </div>
+  );
+}
+
+function formatDuration(ms: number): string {
+  const mins = Math.max(1, Math.round(ms / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  const rem = mins % 60;
+  if (hrs < 24) return rem ? `${hrs}h ${rem}m` : `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ${hrs % 24}h`;
+}
+
+function formatWhen(ts: number): string {
+  return new Date(ts).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function IncidentRow({ incident }: { incident: Incident }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-ink-700 bg-ink-900/50 px-5 py-4">
+      <div className="flex items-center gap-3">
+        <StatusDot tone={incident.ongoing ? 'down' : 'warn'} live={incident.ongoing} />
+        <div>
+          <div className="font-medium text-mist">
+            {incident.node} {incident.ongoing ? 'is offline' : 'was offline'}
+          </div>
+          <div className="text-xs text-mist-faint">
+            Started {formatWhen(incident.startedAt)}
+            {incident.resolvedAt ? ` · recovered ${formatWhen(incident.resolvedAt)}` : ''}
+          </div>
+        </div>
+      </div>
+      <span
+        className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+          incident.ongoing
+            ? 'border-rose-500/30 bg-rose-500/10 text-rose-300'
+            : 'border-ink-600 bg-ink-800 text-mist-muted'
+        }`}
+      >
+        {incident.ongoing ? `Ongoing · ${formatDuration(incident.durationMs)}` : `Resolved · ${formatDuration(incident.durationMs)}`}
+      </span>
     </div>
   );
 }

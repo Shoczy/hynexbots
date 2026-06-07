@@ -57,6 +57,33 @@ cd bot && npm run backup
 
 Treat `bot/data/` as secret and back it up off-box too.
 
+## HTTPS / reverse proxy (Caddy)
+
+The bot's HTTP server (fleet heartbeats + the customer config API) listens on
+`FLEET_PORT` (default `8787`) over plain HTTP. In production, **don't expose that
+port directly** — the `FLEET_SECRET` and `DASHBOARD_API_KEY` travel in headers
+and must ride over TLS. Put [Caddy](https://caddyserver.com) in front: it gets
+and renews Let's Encrypt certificates automatically.
+
+```bash
+sudo apt install caddy
+# edit the domain(s) in deploy/Caddyfile first, then:
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl reload caddy
+```
+
+A ready-to-edit [`deploy/Caddyfile`](deploy/Caddyfile) is included. Keep the bot
+bound to `localhost:8787` so only Caddy is public, then point the apps at the
+HTTPS host:
+
+| App | Variable | Value |
+| --- | --- | --- |
+| dashboard | `CONFIG_API_URL` | `https://api.example.com` |
+| website | `NEXT_PUBLIC_FLEET_STATUS_URL` | `https://api.example.com/public/status` |
+
+> Open ports **80 and 443** (Caddy needs 80 for the ACME challenge) and make sure
+> DNS for each domain points at this host.
+
 ## Website & dashboard
 
 Both are Next.js apps deployed to Vercel (or any Node host):

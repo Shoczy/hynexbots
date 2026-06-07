@@ -19,7 +19,10 @@ A complete Discord bot shop in three parts:
 discord.js v14. Posts a storefront panel; customers pick a ready-made bot from a
 dropdown or click **Commission a Custom Bot** to open a modal. Either way a private
 ticket channel is created with staff controls (claim / close + transcript).
-Payments are handled **manually inside each ticket**.
+Payments are **manual** (crypto / bank transfer / PayPal): the buyer presses
+**"I've sent payment"** in the ticket, which flips the order to *paid* and fires
+an automated delivery message — no payment gateway required. Staff can also move
+orders along the pipeline by hand, and `/orders` summarises it.
 
 ### Setup
 
@@ -135,9 +138,11 @@ your production URL). Only the `identify` scope is requested. Set
    with its own `client.application.id` to fetch settings over HTTP and re-poll
    for live changes.
 
-> **Sessions** are stored in-memory for the MVP (simple, keeps Discord tokens out
-> of the browser). For multi-instance production, swap the `Map` in
-> `dashboard/lib/session.ts` for Redis.
+> **Sessions** are stateless: the public Discord profile (no OAuth tokens) is
+> sealed into an httpOnly cookie with AES-256-GCM, keyed from `SESSION_SECRET`.
+> Nothing is kept server-side, so logins survive restarts and work across
+> multiple instances (e.g. Vercel) with no shared store. See
+> `dashboard/lib/session.ts`.
 
 ### The flow
 

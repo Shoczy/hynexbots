@@ -39,3 +39,13 @@ test('counts + list reflect orders', () => {
   assert.ok(list[0].number > list[1].number, 'newest first');
   assert.equal(orders.list('paid').length, 1, 'status filter works');
 });
+
+test('listForOwner returns only that buyer’s invoices', () => {
+  orders.createOrder({ channelId: 'c3', ownerId: 'u1', product, botName: 'Second' });
+  const mine = orders.listForOwner('u1');
+  assert.equal(mine.length, 2, 'u1 placed two orders');
+  assert.ok(mine[0].number === undefined, 'invoice view omits internal counter');
+  assert.equal(mine[0].id, 'ORD-0003', 'newest first');
+  assert.equal(orders.listForOwner('u2').length, 1);
+  assert.equal(orders.listForOwner('nobody').length, 0);
+});

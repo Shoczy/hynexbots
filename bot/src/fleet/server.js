@@ -58,6 +58,7 @@ function startFleetServer() {
       bots: { total: bots.length, online: botsOnline },
       uptimePct,
       list,
+      incidents: fleetStore.recentIncidents(20),
       updatedAt: Date.now(),
     });
   });
@@ -73,6 +74,11 @@ function startFleetServer() {
 
   // Customer dashboard config API (licenses + per-guild settings).
   mountConfigRoutes(app);
+
+  // Periodically re-check node health so a node going quiet is logged as an
+  // incident even when no heartbeat arrives to trigger the check.
+  const sweep = setInterval(() => fleetStore.evaluate(), 30_000);
+  if (sweep.unref) sweep.unref();
 
   app.listen(config.fleet.port, () => {
     console.log(`✔ Fleet heartbeat server listening on :${config.fleet.port}`);

@@ -3,9 +3,11 @@ import crypto from 'crypto';
 import type { DiscordUser } from './discord';
 
 /**
- * Server-side session store. Keyed by a random session id kept in an httpOnly
- * cookie. In-memory for the MVP — simple and avoids putting Discord tokens in
- * the browser. For multi-instance production, swap this Map for Redis.
+ * Stateless session, carried entirely in an httpOnly cookie. The session
+ * payload (just the public Discord profile — no OAuth tokens) is encrypted and
+ * authenticated with AES-256-GCM, keyed from SESSION_SECRET. Because nothing is
+ * kept server-side, sessions survive restarts and work across multiple
+ * instances (e.g. Vercel) with no shared store.
  */
 export type Session = {
   user: Pick<DiscordUser, 'id' | 'username' | 'global_name' | 'avatar'>;
@@ -15,43 +17,65 @@ export type Session = {
 const TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
 const COOKIE = 'hx_sid';
 
-// Survive Next.js dev hot-reloads by stashing the store on globalThis.
-const g = globalThis as unknown as { __hxSessions?: Map<string, Session> };
-const sessions = g.__hxSessions ?? (g.__hxSessions = new Map<string, Session>());
+// Derive a stable 32-byte key from the secret. In production a real secret is
+// required; in dev we fall back to a fixed dev key so login still works locally.
+function sessionKey(): Buffer {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET must be set in production');
+    }
+    return crypto.scryptSync('hynex-dev-session-secret', 'hynex-session', 32);
+  }
+  return crypto.scryptSync(secret, 'hynex-session', 32);
+}
 
-function prune() {
-  const now = Date.now();
-  for (const [id, s] of sessions) if (now - s.createdAt > TTL_MS) sessions.delete(id);
+function seal(payload: Session): string {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', sessionKey(), iv);
+  const data = Buffer.concat([cipher.update(JSON.stringify(payload), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  // iv.tag.ciphertext, all base64url — compact and cookie-safe.
+  return [iv, tag, data].map((b) => b.toString('base64url')).join('.');
+}
+
+function unseal(value: string): Session | null {
+  const parts = value.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const [iv, tag, data] = parts.map((p) => Buffer.from(p, 'base64url'));
+    const decipher = crypto.createDecipheriv('aes-256-gcm', sessionKey(), iv);
+    decipher.setAuthTag(tag);
+    const json = Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+    const session = JSON.parse(json) as Session;
+    if (!session?.user?.id || typeof session.createdAt !== 'number') return null;
+    return session;
+  } catch {
+    // Tampered, truncated, or sealed with a different key/secret.
+    return null;
+  }
 }
 
 export function createSession(user: Session['user']) {
-  prune();
-  const sid = crypto.randomBytes(24).toString('hex');
-  sessions.set(sid, { user, createdAt: Date.now() });
-  cookies().set(COOKIE, sid, {
+  const session: Session = { user, createdAt: Date.now() };
+  cookies().set(COOKIE, seal(session), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     path: '/',
     maxAge: TTL_MS / 1000,
   });
-  return sid;
 }
 
 export function getSession(): Session | null {
-  const sid = cookies().get(COOKIE)?.value;
-  if (!sid) return null;
-  const s = sessions.get(sid);
-  if (!s) return null;
-  if (Date.now() - s.createdAt > TTL_MS) {
-    sessions.delete(sid);
-    return null;
-  }
-  return s;
+  const value = cookies().get(COOKIE)?.value;
+  if (!value) return null;
+  const session = unseal(value);
+  if (!session) return null;
+  if (Date.now() - session.createdAt > TTL_MS) return null;
+  return session;
 }
 
 export function destroySession() {
-  const sid = cookies().get(COOKIE)?.value;
-  if (sid) sessions.delete(sid);
   cookies().delete(COOKIE);
 }

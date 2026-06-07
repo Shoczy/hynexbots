@@ -70,6 +70,24 @@ function list(filter) {
   return arr.sort((a, b) => b.number - a.number);
 }
 
+/** A customer's own orders (their purchase/invoice history), newest first. */
+function listForOwner(ownerId) {
+  const d = store.read();
+  return Object.values(d.orders || {})
+    .filter((o) => o.ownerId === String(ownerId))
+    .sort((a, b) => b.number - a.number)
+    .map((o) => ({
+      id: o.id,
+      productLabel: o.productLabel,
+      botName: o.botName || null,
+      price: o.price || null,
+      payment: o.paymentLabel || o.payment || null,
+      status: o.status,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+    }));
+}
+
 /** { pending, paid, delivered, cancelled } counts. */
 function counts() {
   const d = store.read();
@@ -78,4 +96,4 @@ function counts() {
   return c;
 }
 
-module.exports = { STATUSES, STATUS_META, createOrder, getByChannel, setStatus, list, counts };
+module.exports = { STATUSES, STATUS_META, createOrder, getByChannel, setStatus, list, listForOwner, counts };

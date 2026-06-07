@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TopBar } from '@/components/TopBar';
 import { Field, Spinner } from '@/components/ui';
+import { BillingPanel } from '@/components/BillingPanel';
 
 type User = { id: string; username: string; global_name?: string | null; avatar: string | null };
 type Bot = {
@@ -154,6 +155,15 @@ export default function DashboardPage() {
               {redeeming ? 'Claiming…' : 'Claim bot'}
             </button>
           </form>
+        </div>
+
+        {/* Purchases & licenses */}
+        <div className="mt-12">
+          <h2 className="font-display text-2xl font-semibold tracking-tight">Purchases &amp; licenses</h2>
+          <p className="mt-1 text-sm text-mist-muted">Your order history and the licenses linked to your account.</p>
+          <div className="mt-5">
+            <BillingPanel />
+          </div>
         </div>
       </main>
     </>

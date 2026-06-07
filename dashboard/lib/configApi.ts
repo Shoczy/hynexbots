@@ -30,6 +30,9 @@ export const configApi = {
   myBots(userId: string) {
     return call(`/api/bots/me?userId=${encodeURIComponent(userId)}`);
   },
+  billing(userId: string) {
+    return call(`/api/bots/me/billing?userId=${encodeURIComponent(userId)}`);
+  },
   getConfig(appId: string, userId: string) {
     return call(`/api/bots/${encodeURIComponent(appId)}/config?userId=${encodeURIComponent(userId)}`);
   },
@@ -86,6 +89,35 @@ export type UsageStats = {
   totalToday: number;
   perCommand: { command: string; count: number }[];
   byDay: { day: string; count: number }[];
+};
+
+export type HealthStats = {
+  days: number;
+  uptimePct: number | null;
+  lastSeen: number | null;
+  byDay: { day: string; pct: number | null }[];
+};
+
+export type Order = {
+  id: string;
+  productLabel: string;
+  botName: string | null;
+  price: string | null;
+  payment: string | null;
+  status: 'pending' | 'paid' | 'delivered' | 'cancelled';
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type License = {
+  appId: string;
+  name: string;
+  type: string;
+  label: string;
+  emoji: string;
+  status: string;
+  registeredAt: number;
+  claimedAt: number | null;
 };
 
 export type AuditEntry = {

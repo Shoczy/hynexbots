@@ -124,6 +124,21 @@ db.exec(`
   );
 `);
 
+// Uptime tracking: each time a sold bot phones home (fetches config, reports
+// usage or syncs its guild) we mark the current 5-minute slot present. Uptime is
+// then "share of slots seen" over a window — a real heartbeat history without the
+// bot needing to do anything extra.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bot_health (
+    app_id TEXT NOT NULL,
+    slot   INTEGER NOT NULL,        -- floor(epochMs / SLOT_MS)
+    at     INTEGER NOT NULL,        -- last contact within this slot
+    PRIMARY KEY (app_id, slot),
+    FOREIGN KEY (app_id) REFERENCES bots(app_id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_health_app ON bot_health(app_id, at);
+`);
+
 // ── Default settings schema ───────────────────────────
 function defaultSettings() {
   return {
@@ -554,6 +569,61 @@ function usageSummary(appId, days = 14) {
   };
 }
 
+// ── Uptime / health ──────────────────────────────────
+const SLOT_MS = 5 * 60 * 1000; // 5-minute presence buckets
+
+/** Mark the bot as alive right now (idempotent within a 5-minute slot). */
+function recordHeartbeat(appId) {
+  const now = Date.now();
+  db.prepare(
+    `INSERT INTO bot_health (app_id, slot, at) VALUES (?, ?, ?)
+     ON CONFLICT(app_id, slot) DO UPDATE SET at = excluded.at`,
+  ).run(String(appId), Math.floor(now / SLOT_MS), now);
+}
+
+/** Count the 5-minute slots that fall inside [lo, hi]. */
+function slotsBetween(lo, hi) {
+  return hi <= lo ? 0 : Math.ceil((hi - lo) / SLOT_MS);
+}
+
+/**
+ * Uptime summary over the last `days`: overall percentage, last-seen time and a
+ * per-day series for charting. Uptime is measured from first-seen (so a brand
+ * new bot isn't unfairly penalised for slots before it existed).
+ */
+function healthSummary(appId, days = 14) {
+  const now = Date.now();
+  const windowStart = now - days * 864e5;
+  const rows = db
+    .prepare('SELECT slot, at FROM bot_health WHERE app_id = ? AND at >= ? ORDER BY at ASC')
+    .all(String(appId), windowStart);
+  if (rows.length === 0) return { days, uptimePct: null, lastSeen: null, byDay: [] };
+
+  const firstAt = rows[0].at;
+  const lastSeen = rows[rows.length - 1].at;
+  const start = Math.max(windowStart, firstAt);
+  const startSlot = Math.floor(start / SLOT_MS);
+  const present = rows.filter((r) => r.slot >= startSlot).length;
+  const expected = Math.max(1, slotsBetween(start, now));
+  const uptimePct = Math.min(100, Math.round((present / expected) * 1000) / 10);
+
+  // Distinct present slots per UTC day (rows are already one-per-slot).
+  const perDay = {};
+  for (const r of rows) {
+    const day = new Date(r.at).toISOString().slice(0, 10);
+    perDay[day] = (perDay[day] || 0) + 1;
+  }
+  const byDay = [];
+  const dayStart = Date.parse(new Date(start).toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  for (let t = dayStart; t <= now; t += 864e5) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    const exp = slotsBetween(Math.max(t, start), Math.min(t + 864e5, now));
+    const pct = exp > 0 ? Math.min(100, Math.round(((perDay[day] || 0) / exp) * 1000) / 10) : null;
+    byDay.push({ day, pct });
+  }
+  return { days, uptimePct, lastSeen, byDay };
+}
+
 module.exports = {
   db,
   defaultSettings,
@@ -582,4 +652,6 @@ module.exports = {
   listAudit,
   recordUsage,
   usageSummary,
+  recordHeartbeat,
+  healthSummary,
 };
