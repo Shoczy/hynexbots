@@ -63,6 +63,7 @@ function getBotsFromPm2() {
         const list = JSON.parse(stdout);
         resolve(
           list.map((p) => ({
+            id: p.pm_id ?? p.pm2_env?.pm_id ?? null, // PM2 process id, shown in /fleet
             name: p.name,
             status: p.pm2_env?.status || 'unknown',
             cpu: p.monit?.cpu ?? null,

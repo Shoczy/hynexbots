@@ -7,6 +7,7 @@ const {
 const config = require('../config');
 const tickets = require('../tickets/manager');
 const { buildPurchaseModal, paymentLabel, MODAL_PREFIX } = require('../tickets/purchaseModal');
+const fleet = require('../commands/fleet');
 
 module.exports = {
   name: 'interactionCreate',
@@ -17,6 +18,25 @@ module.exports = {
         const command = client.commands.get(interaction.commandName);
         if (!command) return;
         return await command.execute(interaction, client);
+      }
+
+      // ── Fleet panel: node dropdown + page buttons ──
+      // deferUpdate + editReply (without re-passing the V2 flag) so we can
+      // re-render the existing V2 panel and re-upload its banner without the 3s
+      // interaction window biting on the image upload.
+      if (interaction.isStringSelectMenu() && interaction.customId === fleet.NODE_SELECT_ID) {
+        await interaction.deferUpdate();
+        const view = fleet.buildFleetView({ nodeId: interaction.values[0], page: 0 });
+        return interaction.editReply({ components: view.components, files: view.files });
+      }
+      if (interaction.isButton() && interaction.customId.startsWith(fleet.PAGE_PREFIX)) {
+        const rest = interaction.customId.slice(fleet.PAGE_PREFIX.length); // <nodeId>:<page>
+        const cut = rest.lastIndexOf(':');
+        const nodeId = rest.slice(0, cut);
+        const page = parseInt(rest.slice(cut + 1), 10) || 0;
+        await interaction.deferUpdate();
+        const view = fleet.buildFleetView({ nodeId, page });
+        return interaction.editReply({ components: view.components, files: view.files });
       }
 
       // ── Product select menu → ask for bot details via modal ──
