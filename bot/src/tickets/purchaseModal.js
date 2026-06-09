@@ -7,6 +7,7 @@ const {
   FileUploadBuilder,
 } = require('discord.js');
 const config = require('../config');
+const { parseEmoji } = require('../lib/emoji');
 
 const MODAL_PREFIX = 'purchase_modal:';
 
@@ -39,7 +40,7 @@ function buildPurchaseModal(product) {
         .setMinValues(1)
         .setMaxValues(1)
         .addOptions(
-          config.payments.map((p) => ({ label: p.label, value: p.value, emoji: p.emoji })),
+          config.payments.map((p) => ({ label: p.label, value: p.value, emoji: parseEmoji(p.emoji) })),
         ),
     );
 

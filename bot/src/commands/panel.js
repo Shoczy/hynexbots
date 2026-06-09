@@ -10,6 +10,7 @@ const {
 } = require('discord.js');
 const config = require('../config');
 const { V2, text, media, sep, container } = require('../lib/components');
+const { parseEmoji } = require('../lib/emoji');
 
 // Header image is shipped with the bot and uploaded as an attachment, so it
 // never expires the way a Discord CDN link would.
@@ -26,7 +27,7 @@ function buildPanel() {
         label: `${p.label} — ${p.price}`,
         value: p.id,
         description: p.description.slice(0, 100),
-        emoji: p.emoji,
+        emoji: parseEmoji(p.emoji),
       })),
     );
 

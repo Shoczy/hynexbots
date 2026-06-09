@@ -54,28 +54,28 @@ const config = {
     {
       id: 'moderation',
       label: 'Moderation',
-      emoji: '🛡️',
+      emoji: '<:shield1:1514034751273566329>',
       price: '$49',
       description: 'Auto-mod, verification, welcome & anti-raid',
     },
     {
       id: 'tickets',
       label: 'Tickets',
-      emoji: '🎟️',
+      emoji: '<:ticket1:1514034787428597872>',
       price: '$39',
       description: 'Tickets, applications, FAQ & welcome',
     },
     {
       id: 'economy',
       label: 'Economy',
-      emoji: '🪙',
+      emoji: '<:coin1:1514034824099139697>',
       price: '$59',
       description: 'Economy, leveling, giveaways & welcome',
     },
     {
       id: 'music',
       label: 'Music',
-      emoji: '🎧',
+      emoji: '<:music1:1514034861969641512>',
       price: '$45',
       description: 'HQ audio, playlists, voice leveling & 24/7',
     },
@@ -83,9 +83,9 @@ const config = {
 
   /** Payment methods offered in the purchase modal dropdown. */
   payments: [
-    { value: 'paysafecard', label: 'Paysafecard', emoji: '💳' },
-    { value: 'paypal', label: 'PayPal', emoji: '🅿️' },
-    { value: 'crypto', label: 'Crypto (BTC / ETH / USDT)', emoji: '🪙' },
+    { value: 'paysafecard', label: 'Paysafecard', emoji: '<:credit:1514036033719762975>' },
+    { value: 'paypal', label: 'PayPal', emoji: '<:paypal:1514035998437412874>' },
+    { value: 'crypto', label: 'Crypto (BTC / ETH / USDT)', emoji: '<:btc1:1514034898069880855>' },
   ],
 };
 
