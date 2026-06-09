@@ -37,22 +37,6 @@ function orderControls() {
   return new ActionRowBuilder().addComponents(menu);
 }
 
-/**
- * Buyer-facing payment confirmation, shown on purchase tickets. For
- * crypto/manual transfers there's no payment gateway callback, so the buyer
- * presses this once they've sent payment — it flips the order to "paid" and
- * fires the automated delivery message, no staff action required.
- */
-function paymentControls() {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('order_confirm_payment')
-      .setLabel("I've sent payment")
-      .setEmoji('💸')
-      .setStyle(ButtonStyle.Success),
-  );
-}
-
 function isStaff(interaction) {
   if (config.tickets.staffRoleId && interaction.member?.roles?.cache?.has(config.tickets.staffRoleId)) return true;
   return Boolean(interaction.member?.permissions?.has(PermissionFlagsBits.ManageGuild));
@@ -187,7 +171,6 @@ async function createTicket(interaction, opts) {
   }
   children.push(sep());
   if (order) {
-    children.push(paymentControls());
     children.push(orderControls());
   }
   children.push(ticketControls());
@@ -249,31 +232,6 @@ async function announcePaid(interaction, order, actorId) {
     components: [deliveryView(order, actorId)],
     allowedMentions: { roles: config.tickets.staffRoleId ? [config.tickets.staffRoleId] : [] },
   });
-}
-
-/**
- * Buyer self-service: confirm they've sent a crypto/manual payment. Flips the
- * order to paid and triggers automated delivery — no staff step required.
- */
-async function confirmPayment(interaction) {
-  const data = store.read();
-  const ticket = data.tickets[interaction.channel.id];
-  const order = orders.getByChannel(interaction.channel.id);
-  if (!order) {
-    return interaction.reply({ content: 'No order is attached to this ticket.', ephemeral: true });
-  }
-  const isOwner = ticket?.ownerId === interaction.user.id;
-  if (!isOwner && !isStaff(interaction)) {
-    return interaction.reply({ content: 'Only the buyer can confirm their payment.', ephemeral: true });
-  }
-  if (order.status === 'paid' || order.status === 'delivered') {
-    return interaction.reply({ content: `This order is already marked **${order.status}**.`, ephemeral: true });
-  }
-  if (order.status === 'cancelled') {
-    return interaction.reply({ content: 'This order was cancelled — ask staff to reopen it.', ephemeral: true });
-  }
-  orders.setStatus(interaction.channel.id, 'paid', interaction.user.id);
-  await announcePaid(interaction, order, interaction.user.id);
 }
 
 /** Staff moves a purchase order along its pipeline from inside the ticket. */
@@ -348,4 +306,4 @@ async function closeTicket(interaction) {
   setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
 }
 
-module.exports = { createTicket, claimTicket, closeTicket, setOrderStatus, confirmPayment, ticketControls };
+module.exports = { createTicket, claimTicket, closeTicket, setOrderStatus, ticketControls };

@@ -93,9 +93,6 @@ module.exports = {
       if (interaction.isButton() && interaction.customId === 'ticket_close') {
         return tickets.closeTicket(interaction);
       }
-      if (interaction.isButton() && interaction.customId === 'order_confirm_payment') {
-        return tickets.confirmPayment(interaction);
-      }
       // Staff order-status dropdown (replaces the old per-status buttons).
       if (interaction.isStringSelectMenu() && interaction.customId === 'order_status_select') {
         return tickets.setOrderStatus(interaction, interaction.values[0]);
