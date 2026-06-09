@@ -14,10 +14,7 @@ export function LicensePanel({ appId }: { appId: string }) {
   const [license, setLicense] = useState<LicenseInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
 
-  const [regenerating, setRegenerating] = useState(false);
   const [transferId, setTransferId] = useState('');
   const [transferring, setTransferring] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -39,37 +36,6 @@ export function LicensePanel({ appId }: { appId: string }) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId]);
-
-  async function copyKey() {
-    if (!license?.key) return;
-    try {
-      await navigator.clipboard.writeText(license.key);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      /* clipboard unavailable */
-    }
-  }
-
-  async function regenerate() {
-    if (!confirm('Generate a new backup key? The current key will stop working immediately.')) return;
-    setRegenerating(true);
-    setMsg(null);
-    const res = await fetch(withBase(`/api/bot/${appId}/license`), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'regenerate' }),
-    });
-    const data = await res.json();
-    setRegenerating(false);
-    if (data.ok) {
-      setLicense((l) => (l ? { ...l, key: data.key } : l));
-      setRevealed(true);
-      setMsg({ type: 'ok', text: 'New backup key generated. Store it somewhere safe.' });
-    } else {
-      setMsg({ type: 'err', text: data.error || 'Could not regenerate the key.' });
-    }
-  }
 
   async function transfer(e: React.FormEvent) {
     e.preventDefault();
@@ -104,21 +70,19 @@ export function LicensePanel({ appId }: { appId: string }) {
   if (loading) {
     return (
       <div className="card flex items-center gap-3 px-5 py-4 text-sm text-mist-muted">
-        <Spinner className="h-4 w-4" /> Loading license…
+        <Spinner className="h-4 w-4" /> Loading…
       </div>
     );
   }
   if (failed || !license) {
-    return <div className="card px-5 py-4 text-sm text-mist-muted">License details aren’t available right now.</div>;
+    return <div className="card px-5 py-4 text-sm text-mist-muted">Ownership details aren’t available right now.</div>;
   }
-
-  const masked = license.key ? license.key.replace(/[^-]/g, '•') : null;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-xl font-semibold">License</h2>
-        <p className="mt-1 text-sm text-mist-muted">Your backup key and ownership controls.</p>
+        <h2 className="font-display text-xl font-semibold">Ownership</h2>
+        <p className="mt-1 text-sm text-mist-muted">Registration details and ownership transfer.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -132,36 +96,7 @@ export function LicensePanel({ appId }: { appId: string }) {
         </div>
         <div className="card px-5 py-4">
           <div className="font-display text-lg font-semibold text-mist">{fmtDate(license.claimedAt)}</div>
-          <div className="mt-1 text-xs text-mist-faint">Claimed</div>
-        </div>
-      </div>
-
-      {/* Backup key */}
-      <div className="card p-5">
-        <div className="text-sm font-medium text-mist">Backup / transfer key</div>
-        <p className="mt-1 text-xs text-mist-muted">
-          Use this to re-claim or move the bot to another account. Treat it like a password.
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <code className="flex-1 rounded-lg border border-ink-700 bg-ink-900 px-4 py-2.5 font-mono text-sm tracking-wider text-mist">
-            {license.key ? (revealed ? license.key : masked) : 'No key on file'}
-          </code>
-          {license.key && (
-            <>
-              <button onClick={() => setRevealed((r) => !r)} className="btn-ghost text-sm">
-                {revealed ? 'Hide' : 'Reveal'}
-              </button>
-              <button onClick={copyKey} className="btn-ghost text-sm">
-                {copied ? 'Copied ✓' : 'Copy'}
-              </button>
-            </>
-          )}
-        </div>
-        <div className="mt-4">
-          <button onClick={regenerate} className="btn-ghost text-sm" disabled={regenerating}>
-            {regenerating ? <Spinner /> : null}
-            {regenerating ? 'Generating…' : 'Generate new key'}
-          </button>
+          <div className="mt-1 text-xs text-mist-faint">Owned since</div>
         </div>
       </div>
 

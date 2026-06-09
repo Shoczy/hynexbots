@@ -254,7 +254,7 @@ export default function EditorPage() {
     ...editableTabs,
     { id: 'analytics' as Tab, label: 'Analytics' },
     { id: 'logs' as Tab, label: 'Logs' },
-    ...(isOwner ? [{ id: 'team' as Tab, label: 'Team' }, { id: 'license' as Tab, label: 'License' }] : []),
+    ...(isOwner ? [{ id: 'team' as Tab, label: 'Team' }, { id: 'license' as Tab, label: 'Ownership' }] : []),
   ];
   const visibleModules = MODULES.filter((m) => features.modules.includes(m.key));
   const canControlProcess = isOwner || perms.includes('process');

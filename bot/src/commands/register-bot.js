@@ -43,8 +43,8 @@ module.exports = {
     .addUserOption((o) =>
       o
         .setName('owner')
-        .setDescription('The customer (pre-assigns the bot to their account). Omit to use the backup key only.')
-        .setRequired(false),
+        .setDescription('The customer — the bot is assigned to their account so they just log in.')
+        .setRequired(true),
     )
     .addStringOption((o) =>
       o
@@ -96,7 +96,7 @@ module.exports = {
         ? featuresFromModules(featuresRaw.split(',').map((s) => s.trim().toLowerCase()))
         : null;
 
-    const result = store.registerBot({ appId, name, type, ownerId: owner?.id || null, withKey: true, features });
+    const result = store.registerBot({ appId, name, type, ownerId: owner.id, withKey: false, features });
 
     if (!result.ok) {
       const human = {
@@ -113,43 +113,34 @@ module.exports = {
 
     const p = config.catalog.find((c) => c.id === type);
     const typeLabel = p ? `${p.emoji} ${p.label}` : '🛠️ Custom Bot';
-    const intro = owner
-      ? `<@${owner.id}> can log into the dashboard now — their bot is already waiting, no key needed.`
-      : 'Give the customer the backup key below to claim their bot in the dashboard.';
 
     const view = container(config.brand.success, [
-      text(`### Bot registered\n${intro}`),
+      text(`### Bot registered\n<@${owner.id}> can log into the dashboard now — their bot is already waiting, no key needed.`),
       sep(),
-      text(`**Name**  ${name}\n**Type**  ${typeLabel}\n**Application ID**  \`${appId}\``),
-      text(`**Backup / transfer key**\n\`\`\`${result.key}\`\`\``),
+      text(`**Name**  ${name}\n**Type**  ${typeLabel}\n**Application ID**  \`${appId}\`\n**Owner**  <@${owner.id}>`),
     ]);
 
     await interaction.reply({ flags: V2_EPHEMERAL, components: [view] });
 
     // ── Onboarding DM to the customer ──────────────────
-    // Send the new owner their dashboard link + backup key so they can get
-    // started without a staff member relaying anything by hand.
-    if (owner) {
-      try {
-        const u = await interaction.client.users.fetch(owner.id);
-        await u.send(
-          `🎉 **Your ${config.brand.name} bot is ready!**\n\n` +
-            `**${name}** (${typeLabel}) has been set up for you.\n\n` +
-            `**Customize it here:** ${config.dashboardUrl}/dashboard\n` +
-            `Just log in with Discord — your bot is already linked to your account.\n\n` +
-            `**Backup / transfer key** (keep this safe):\n\`\`\`${result.key}\`\`\`\n` +
-            `Use it to re-claim or transfer the bot if you ever need to.`,
-        );
-      } catch {
-        await interaction.followUp({
-          flags: V2_EPHEMERAL,
-          components: [
-            container(config.brand.warning, [
-              text(`### Couldn’t DM the customer\n<@${owner.id}> has DMs closed — share the dashboard link and backup key with them manually.`),
-            ]),
-          ],
-        });
-      }
+    // The bot is already linked to their account — just send the dashboard link.
+    try {
+      const u = await interaction.client.users.fetch(owner.id);
+      await u.send(
+        `🎉 **Your ${config.brand.name} bot is ready!**\n\n` +
+          `**${name}** (${typeLabel}) has been set up for you.\n\n` +
+          `**Customize it here:** ${config.dashboardUrl}/dashboard\n` +
+          `Just log in with Discord — your bot is already linked to your account.`,
+      );
+    } catch {
+      await interaction.followUp({
+        flags: V2_EPHEMERAL,
+        components: [
+          container(config.brand.warning, [
+            text(`### Couldn’t DM the customer\n<@${owner.id}> has DMs closed — share the dashboard link with them manually.`),
+          ]),
+        ],
+      });
     }
 
     // ── Auto-launch when a token was provided ──────────

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { TopBar } from '@/components/TopBar';
-import { Field, Spinner } from '@/components/ui';
+import { Spinner } from '@/components/ui';
 import { BillingPanel } from '@/components/BillingPanel';
 import { withBase } from '@/lib/paths';
 
@@ -22,10 +22,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [bots, setBots] = useState<Bot[]>([]);
   const [serviceDown, setServiceDown] = useState(false);
-
-  const [key, setKey] = useState('');
-  const [redeeming, setRedeeming] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   async function load() {
     const res = await fetch(withBase('/api/me'), { cache: 'no-store' });
@@ -46,31 +42,6 @@ export default function DashboardPage() {
     load();
   }, []);
 
-  async function redeem(e: React.FormEvent) {
-    e.preventDefault();
-    setRedeeming(true);
-    setMsg(null);
-    const res = await fetch(withBase('/api/redeem'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: key.trim() }),
-    });
-    const data = await res.json();
-    setRedeeming(false);
-    if (data.ok) {
-      setMsg({ type: 'ok', text: `“${data.bot.name}” is now linked to your account.` });
-      setKey('');
-      load();
-    } else {
-      const human: Record<string, string> = {
-        invalid_key: 'That key doesn’t exist. Double-check it and try again.',
-        already_claimed: 'That bot has already been claimed by another account.',
-        revoked: 'That bot’s license has been revoked. Contact support.',
-      };
-      setMsg({ type: 'err', text: human[data.error] || data.error || 'Could not redeem key.' });
-    }
-  }
-
   if (loading) {
     return (
       <>
@@ -88,7 +59,7 @@ export default function DashboardPage() {
       <main className="container-content py-10">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="font-display text-3xl font-semibold tracking-tightest">Your bots</h1>
-          <p className="mt-1.5 text-mist-muted">Select a bot to customize, or claim a new one with a key.</p>
+          <p className="mt-1.5 text-mist-muted">Select a bot to customize its settings.</p>
         </motion.div>
 
         {serviceDown && (
@@ -128,44 +99,9 @@ export default function DashboardPage() {
 
           {bots.length === 0 && (
             <div className="card col-span-full p-8 text-center text-mist-muted">
-              No bots linked yet. If you just bought one, it should appear here after our team registers it —
-              or claim it with a key below.
+              No bots linked yet. If you just bought one, it’ll appear here automatically once our team registers it to your account.
             </div>
           )}
-        </div>
-
-        {/* Claim by key */}
-        <div className="mt-10 card max-w-xl p-6">
-          <h2 className="font-display text-xl font-semibold">Have a key?</h2>
-          <p className="mt-1 text-sm text-mist-muted">
-            Most bots appear automatically. If you were given a key, enter it here to claim your bot.
-          </p>
-          <form onSubmit={redeem} className="mt-5 space-y-4">
-            <Field label="License key">
-              <input
-                className="input font-mono"
-                placeholder="HXN-XXXX-XXXX-XXXX"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                required
-              />
-            </Field>
-            {msg && (
-              <p
-                className={`rounded-xl px-4 py-3 text-sm ${
-                  msg.type === 'ok'
-                    ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                    : 'border border-red-500/30 bg-red-500/10 text-red-300'
-                }`}
-              >
-                {msg.text}
-              </p>
-            )}
-            <button type="submit" className="btn-primary" disabled={redeeming}>
-              {redeeming ? <Spinner /> : null}
-              {redeeming ? 'Claiming…' : 'Claim bot'}
-            </button>
-          </form>
         </div>
 
         {/* Purchases & licenses */}
