@@ -16,7 +16,7 @@ module.exports = {
       if (interaction.isChatInputCommand()) {
         const command = client.commands.get(interaction.commandName);
         if (!command) return;
-        return command.execute(interaction, client);
+        return await command.execute(interaction, client);
       }
 
       // ── Product select menu → ask for bot details via modal ──

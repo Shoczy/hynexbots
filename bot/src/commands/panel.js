@@ -62,7 +62,10 @@ module.exports = {
     .setDescription('Post the Hynex Bots storefront / ticket panel in this channel.')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
   async execute(interaction) {
+    // Acknowledge first — uploading the panel image can take >3s, which would
+    // otherwise expire the interaction token (10062 Unknown interaction).
+    await interaction.deferReply({ ephemeral: true });
     await interaction.channel.send(buildPanel());
-    await interaction.reply({ content: 'Storefront panel posted.', ephemeral: true });
+    await interaction.editReply({ content: 'Storefront panel posted.' });
   },
 };
