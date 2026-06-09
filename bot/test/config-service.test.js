@@ -11,7 +11,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const store = require('../src/config-service/db');
 const { sanitizeSettings } = require('../src/config-service/validate');
-const { resolveFeatures } = require('../src/config-service/products');
+const { resolveFeatures, featuresFromModules } = require('../src/config-service/products');
 const { sanitizePermissions } = require('../src/config-service/permissions');
 
 const APP = '100000000000000001';
@@ -66,6 +66,201 @@ test('sanitizeSettings enforces product scope', () => {
   const features = resolveFeatures(store.getBot(APP)); // moderation product
   const saved = sanitizeSettings({ modules: { economy: true, moderation: true } }, features);
   assert.equal(saved.modules.economy, false, 'out-of-scope module forced off');
+});
+
+test('sanitizeLeveling clamps values and keeps only valid role rewards', () => {
+  const saved = sanitizeSettings({
+    leveling: {
+      xpPerMessage: { min: 40, max: 10 }, // max < min → clamped up to min
+      cooldownSec: 99999, // over the 3600 cap
+      levelUp: { enabled: true, channelId: '123', message: 'Level {level}!' },
+      stackRewards: false,
+      rewards: [
+        { level: 5, roleId: '111111111111111111' }, // valid
+        { level: 10, roleId: 'not-a-snowflake' }, // dropped: no roleId
+      ],
+      noXpRoleIds: ['222222222222222222', 'bad'],
+    },
+  });
+  const lv = saved.leveling;
+  assert.equal(lv.xpPerMessage.max, 40, 'max is raised to at least min');
+  assert.equal(lv.cooldownSec, 3600, 'cooldown clamped to max');
+  assert.equal(lv.rewards.length, 1, 'reward without a valid role is dropped');
+  assert.ok(lv.rewards[0].id, 'reward gets a generated id');
+  assert.deepEqual(lv.noXpRoleIds, ['222222222222222222'], 'non-snowflake role ids dropped');
+});
+
+test('moderation product is now a multi-module guardian', () => {
+  const APP6 = '100000000000000006';
+  store.registerBot({ appId: APP6, name: 'Guardian', type: 'moderation', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP6));
+  assert.ok(f.modules.includes('verification') && f.modules.includes('welcome'), 'bundles verification + welcome');
+  assert.ok(f.tabs.includes('verification') && f.tabs.includes('modules'), 'exposes verification + modules tabs');
+  // The bundled modules can actually be enabled (not clamped off as out-of-scope).
+  const saved = sanitizeSettings({ modules: { welcome: true, verification: true, economy: true } }, f);
+  assert.equal(saved.modules.welcome, true, 'welcome is in scope');
+  assert.equal(saved.modules.verification, true, 'verification is in scope');
+  assert.equal(saved.modules.economy, false, 'economy stays out of scope');
+});
+
+test('moderation guardian bundles all guardian modules', () => {
+  const APP7 = '100000000000000007';
+  store.registerBot({ appId: APP7, name: 'Guardian2', type: 'moderation', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP7));
+  for (const m of ['verification', 'reactionroles', 'antinuke', 'welcome', 'leveling']) {
+    assert.ok(f.modules.includes(m), `bundles ${m}`);
+  }
+  const saved = sanitizeSettings({ modules: { reactionroles: true, antinuke: true, leveling: true } }, f);
+  assert.equal(saved.modules.reactionroles, true);
+  assert.equal(saved.modules.antinuke, true);
+  assert.equal(saved.modules.leveling, true);
+});
+
+test('sanitizeReactionRoles drops roles without an id/label and caps panels', () => {
+  const saved = sanitizeSettings({
+    reactionRoles: {
+      panels: [
+        {
+          channelId: '123456789012345678',
+          title: '',
+          roles: [
+            { roleId: '111111111111111111', label: 'Gamer', emoji: '🎮' },
+            { roleId: 'bad', label: 'Nope' }, // dropped — invalid role id
+            { roleId: '222222222222222222', label: '' }, // dropped — no label
+          ],
+        },
+      ],
+    },
+  });
+  const p = saved.reactionRoles.panels[0];
+  assert.equal(p.roles.length, 1, 'only the valid role survives');
+  assert.ok(p.roles[0].id, 'role gets a generated id');
+  assert.ok(p.title.length > 0, 'empty title falls back');
+});
+
+test('sanitizeAntiNuke clamps limits and validates punishment', () => {
+  const saved = sanitizeSettings({
+    antiNuke: {
+      punishment: 'nuke-them', // invalid → default
+      limits: { ban: { enabled: true, max: 999, perSeconds: 1 } },
+      whitelistUserIds: ['709393455519891486', 'bad'],
+    },
+  });
+  const a = saved.antiNuke;
+  assert.equal(a.punishment, 'strip', 'invalid punishment falls back to default');
+  assert.equal(a.limits.ban.max, 100, 'max clamped to 100');
+  assert.equal(a.limits.ban.perSeconds, 5, 'perSeconds clamped up to the 5s floor');
+  assert.deepEqual(a.whitelistUserIds, ['709393455519891486'], 'invalid ids dropped');
+});
+
+test('sanitizeVerification keeps valid ids and falls back on empty text', () => {
+  const saved = sanitizeSettings({
+    verification: { channelId: '123456789012345678', roleId: 'nope', title: '', buttonLabel: 'Unlock' },
+  });
+  const v = saved.verification;
+  assert.equal(v.channelId, '123456789012345678', 'valid snowflake kept');
+  assert.equal(v.roleId, '', 'invalid role id dropped');
+  assert.ok(v.title.length > 0, 'empty title falls back to default');
+  assert.equal(v.buttonLabel, 'Unlock', 'custom button label kept');
+});
+
+test('tickets product is now a full support suite', () => {
+  const APP8 = '100000000000000008';
+  store.registerBot({ appId: APP8, name: 'Concierge', type: 'tickets', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP8));
+  for (const m of ['tickets', 'applications', 'faq', 'welcome']) {
+    assert.ok(f.modules.includes(m), `bundles ${m}`);
+  }
+  assert.ok(f.tabs.includes('applications') && f.tabs.includes('faq'));
+  const saved = sanitizeSettings({ modules: { applications: true, faq: true, moderation: true } }, f);
+  assert.equal(saved.modules.applications, true);
+  assert.equal(saved.modules.faq, true);
+  assert.equal(saved.modules.moderation, false, 'out-of-scope module forced off');
+});
+
+test('sanitizeApplications caps questions at 5 and drops empty forms', () => {
+  const saved = sanitizeSettings({
+    applications: {
+      reviewChannelId: '123456789012345678',
+      forms: [
+        { name: 'Staff', questions: Array.from({ length: 8 }, (_, i) => ({ label: `Q${i}`, style: 'short' })) },
+        { name: 'Empty', questions: [{ label: '' }] }, // dropped — no valid questions
+      ],
+    },
+  });
+  const forms = saved.applications.forms;
+  assert.equal(forms.length, 1, 'form with no valid questions is dropped');
+  assert.equal(forms[0].questions.length, 5, 'questions capped at Discord modal limit');
+  assert.ok(forms[0].questions[0].id, 'questions get generated ids');
+});
+
+test('sanitizeFaq keeps entries with keywords + answer, validates match', () => {
+  const saved = sanitizeSettings({
+    faq: {
+      autoAnswer: false,
+      entries: [
+        { keywords: ['Refund', 'REFUND', 'money back'], answer: 'See #refunds.', match: 'weird' },
+        { keywords: [], answer: 'orphan' }, // dropped — no keywords
+        { keywords: ['x'], answer: '' }, // dropped — no answer
+      ],
+    },
+  });
+  const faq = saved.faq;
+  assert.equal(faq.autoAnswer, false);
+  assert.equal(faq.entries.length, 1, 'only the complete entry survives');
+  assert.deepEqual(faq.entries[0].keywords, ['refund', 'money back'], 'keywords lowercased + de-duped');
+  assert.equal(faq.entries[0].match, 'contains', 'invalid match falls back');
+});
+
+test('economy product is now an engagement economy', () => {
+  const APP9 = '100000000000000009';
+  store.registerBot({ appId: APP9, name: 'Vault', type: 'economy', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP9));
+  for (const m of ['economy', 'leveling', 'giveaways', 'welcome']) {
+    assert.ok(f.modules.includes(m), `bundles ${m}`);
+  }
+  assert.ok(f.tabs.includes('giveaways') && f.tabs.includes('leveling'));
+  const saved = sanitizeSettings({ modules: { leveling: true, giveaways: true, music: true } }, f);
+  assert.equal(saved.modules.leveling, true);
+  assert.equal(saved.modules.giveaways, true);
+  assert.equal(saved.modules.music, false, 'out-of-scope module forced off');
+});
+
+test('sanitizeGiveaways keeps valid role ids only', () => {
+  const saved = sanitizeSettings({
+    giveaways: { managerRoleIds: ['111111111111111111', 'bad', '111111111111111111'], requireRoleId: 'nope' },
+  });
+  const g = saved.giveaways;
+  assert.deepEqual(g.managerRoleIds, ['111111111111111111'], 'invalid + duplicate ids dropped');
+  assert.equal(g.requireRoleId, '', 'invalid require role dropped');
+});
+
+test('music product is now a full audio experience', () => {
+  const APP10 = '100000000000000010';
+  store.registerBot({ appId: APP10, name: 'Resonance', type: 'music', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP10));
+  for (const m of ['music', 'playlists', 'leveling', 'welcome']) {
+    assert.ok(f.modules.includes(m), `bundles ${m}`);
+  }
+  assert.ok(f.tabs.includes('playlists') && f.tabs.includes('leveling'));
+  const saved = sanitizeSettings({ modules: { playlists: true, leveling: true, economy: true } }, f);
+  assert.equal(saved.modules.playlists, true);
+  assert.equal(saved.modules.leveling, true);
+  assert.equal(saved.modules.economy, false, 'out-of-scope module forced off');
+});
+
+test('sanitizePlaylists clamps maxPerGuild and coerces djOnly', () => {
+  const saved = sanitizeSettings({ playlists: { djOnly: 'yes', maxPerGuild: 9999 } });
+  assert.equal(saved.playlists.djOnly, true);
+  assert.equal(saved.playlists.maxPerGuild, 200, 'clamped to max');
+});
+
+test('featuresFromModules surfaces each module’s settings tab', () => {
+  const f = featuresFromModules(['economy', 'leveling', 'welcome', 'bogus']);
+  assert.ok(f.tabs.includes('economy') && f.tabs.includes('leveling'), 'system tabs are surfaced');
+  assert.ok(f.tabs.includes('messages'), 'welcome maps to the messages tab');
+  assert.ok(!f.modules.includes('bogus'), 'unknown modules are dropped');
+  assert.ok(f.commandGroups.includes('utility'), 'utility commands always included');
 });
 
 test('usage analytics aggregate correctly', () => {

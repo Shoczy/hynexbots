@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 import type { UsageStats, HealthStats, BotIncident } from '@/lib/configApi';
 
 type Guild = { name: string; roles: number; channels: number; syncedAt: number } | null;
@@ -40,7 +41,7 @@ export function AnalyticsPanel({ appId }: { appId: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/bot/${appId}/stats?days=14`, { cache: 'no-store' });
+        const res = await fetch(withBase(`/api/bot/${appId}/stats?days=14`), { cache: 'no-store' });
         const data = await res.json();
         if (data.ok) {
           setUsage(data.usage);

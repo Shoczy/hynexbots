@@ -8,11 +8,57 @@
  *
  * The dashboard is the source of truth; this only needs to stay loosely in sync.
  */
+function messageBlock() {
+  return {
+    enabled: false,
+    channelId: '',
+    text: '',
+    embed: { enabled: false, title: '', description: '', color: '#6366f1', image: '', footer: '' },
+  };
+}
+
 function defaultSettings() {
   return {
     basics: { prefix: '!', embedColor: '#6366f1', nickname: '', language: 'en', logChannelId: '' },
-    modules: { moderation: true },
+    modules: {
+      moderation: true,
+      verification: false,
+      reactionroles: false,
+      antinuke: false,
+      welcome: false,
+      leveling: false,
+    },
     commands: {}, // { [name]: { enabled, roles[] } }
+    messages: { welcome: messageBlock(), leave: messageBlock(), autoresponses: [], autoRoleIds: [] },
+    verification: {
+      channelId: '',
+      roleId: '',
+      title: 'Verify to continue',
+      description: 'Click the button below to confirm you’re human and unlock the server.',
+      buttonLabel: 'Verify',
+      successMessage: 'You’re verified — welcome aboard! 🎉',
+    },
+    reactionRoles: { panels: [] },
+    antiNuke: {
+      punishment: 'strip',
+      limits: {
+        channelDelete: { enabled: true, max: 3, perSeconds: 30 },
+        roleDelete: { enabled: true, max: 3, perSeconds: 30 },
+        ban: { enabled: true, max: 5, perSeconds: 30 },
+        kick: { enabled: true, max: 5, perSeconds: 30 },
+      },
+      whitelistUserIds: [],
+      whitelistRoleIds: [],
+      alertChannelId: '',
+    },
+    leveling: {
+      xpPerMessage: { min: 15, max: 25 },
+      cooldownSec: 60,
+      levelUp: { enabled: true, channelId: '', message: 'GG {user}, you reached level {level}! 🎉' },
+      stackRewards: true,
+      rewards: [],
+      noXpRoleIds: [],
+    },
     moderation: {
       automod: {
         enabled: false,

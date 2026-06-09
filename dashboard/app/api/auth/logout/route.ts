@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { destroySession } from '@/lib/session';
+import { withBase } from '@/lib/paths';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export async function GET() {
   destroySession();
-  return NextResponse.redirect(new URL('/', req.url));
+  // Relative redirect (resolved against the public origin) back to the login page.
+  return new NextResponse(null, { status: 302, headers: { Location: withBase('/') } });
 }

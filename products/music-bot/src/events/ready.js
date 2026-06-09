@@ -90,6 +90,11 @@ module.exports = {
       guild.members.me?.setNickname(cfg('basics.nickname', '') || null).catch(() => {});
     });
 
+    // Voice leveling: award XP to active listeners once a minute.
+    const { tickVoice } = require('../leveling');
+    const xpTimer = setInterval(() => tickVoice(client).catch(() => {}), 60_000);
+    if (xpTimer.unref) xpTimer.unref();
+
     console.log(`✔ Hynex Music bot online as ${client.user.tag} (app ${appId}) in ${client.guilds.cache.size} server(s).`);
   },
 };

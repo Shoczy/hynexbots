@@ -3,10 +3,26 @@
 const { Events } = require('discord.js');
 const { authorize, DENY_MESSAGE } = require('../lib/perms');
 const { err } = require('../lib/embeds');
+const { VERIFY_BUTTON_ID, handleVerifyButton } = require('../verification');
+const { PREFIX: RR_PREFIX, handleButton: handleReactionRole } = require('../reactionroles');
 
 module.exports = {
   name: Events.InteractionCreate,
   async execute(interaction, client) {
+    // Button interactions (verification gate, self-roles, etc.) — before commands.
+    if (interaction.isButton()) {
+      try {
+        if (interaction.customId === VERIFY_BUTTON_ID) {
+          await handleVerifyButton(interaction);
+        } else if (interaction.customId.startsWith(RR_PREFIX)) {
+          await handleReactionRole(interaction);
+        }
+      } catch (e) {
+        console.error('button handler failed:', e);
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
     const command = client.commands.get(interaction.commandName);
     if (!command) return;

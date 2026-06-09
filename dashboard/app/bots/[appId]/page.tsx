@@ -13,32 +13,70 @@ import { TeamEditor } from '@/components/TeamEditor';
 import { AnalyticsPanel } from '@/components/AnalyticsPanel';
 import { LicensePanel } from '@/components/LicensePanel';
 import { ModerationEditor } from '@/components/ModerationEditor';
+import { VerificationEditor } from '@/components/VerificationEditor';
+import { ReactionRolesEditor } from '@/components/ReactionRolesEditor';
+import { AntiNukeEditor } from '@/components/AntiNukeEditor';
 import { TicketsEditor } from '@/components/TicketsEditor';
+import { ApplicationsEditor } from '@/components/ApplicationsEditor';
+import { FaqEditor } from '@/components/FaqEditor';
 import { EconomyEditor } from '@/components/EconomyEditor';
+import { GiveawaysEditor } from '@/components/GiveawaysEditor';
 import { MusicEditor } from '@/components/MusicEditor';
+import { PlaylistsEditor } from '@/components/PlaylistsEditor';
+import { LevelingEditor } from '@/components/LevelingEditor';
 import {
   MODULES,
   LANGS,
   effectiveFeatures,
   defaultModeration,
+  defaultVerification,
+  defaultReactionRoles,
+  defaultAntiNuke,
   defaultTickets,
+  defaultApplications,
+  defaultFaq,
+  defaultGiveaways,
   defaultEconomy,
   defaultMusic,
+  defaultPlaylists,
+  defaultLeveling,
   type Settings,
   type Features,
 } from '@/lib/settings';
 import { GuildProvider, type Guild } from '@/lib/guildContext';
+import { withBase } from '@/lib/paths';
 
-type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'tickets' | 'economy' | 'music' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
+type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'verification' | 'reactionroles' | 'antinuke' | 'tickets' | 'applications' | 'faq' | 'economy' | 'giveaways' | 'music' | 'playlists' | 'leveling' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'modules', label: 'Modules' },
   { id: 'messages', label: 'Messages & Embeds' },
   { id: 'moderation', label: 'Moderation' },
+  { id: 'verification', label: 'Verification' },
+  { id: 'reactionroles', label: 'Reaction Roles' },
+  { id: 'antinuke', label: 'Anti-Nuke' },
   { id: 'tickets', label: 'Tickets' },
+  { id: 'applications', label: 'Applications' },
+  { id: 'faq', label: 'FAQ' },
   { id: 'economy', label: 'Economy' },
+  { id: 'giveaways', label: 'Giveaways' },
   { id: 'music', label: 'Music' },
+  { id: 'playlists', label: 'Playlists' },
+  { id: 'leveling', label: 'Leveling' },
   { id: 'commands', label: 'Commands' },
+];
+
+// Sidebar grouping for the editor nav — keeps the (now many) tabs tidy and
+// guides customers: general setup, the modules they bought, read-only insights,
+// and account management. Only groups with at least one in-scope tab render.
+const TAB_GROUPS: { label: string; tabs: Tab[] }[] = [
+  { label: 'Setup', tabs: ['basics', 'modules', 'messages', 'commands'] },
+  {
+    label: 'Modules',
+    tabs: ['moderation', 'verification', 'reactionroles', 'antinuke', 'tickets', 'applications', 'faq', 'economy', 'giveaways', 'music', 'playlists', 'leveling'],
+  },
+  { label: 'Insights', tabs: ['analytics', 'logs'] },
+  { label: 'Manage', tabs: ['team', 'license'] },
 ];
 
 export default function EditorPage() {
@@ -57,9 +95,9 @@ export default function EditorPage() {
 
   useEffect(() => {
     (async () => {
-      const res = await fetch(`/api/bot/${appId}/config`, { cache: 'no-store' });
+      const res = await fetch(withBase(`/api/bot/${appId}/config`), { cache: 'no-store' });
       if (res.status === 401) {
-        window.location.href = '/';
+        window.location.href = withBase('/');
         return;
       }
       const data = await res.json();
@@ -112,23 +150,55 @@ export default function EditorPage() {
     setSettings((s) => (s ? { ...s, moderation } : s));
     markDirty();
   }
+  function setVerification(verification: Settings['verification']) {
+    setSettings((s) => (s ? { ...s, verification } : s));
+    markDirty();
+  }
+  function setReactionRoles(reactionRoles: Settings['reactionRoles']) {
+    setSettings((s) => (s ? { ...s, reactionRoles } : s));
+    markDirty();
+  }
+  function setAntiNuke(antiNuke: Settings['antiNuke']) {
+    setSettings((s) => (s ? { ...s, antiNuke } : s));
+    markDirty();
+  }
   function setTickets(tickets: Settings['tickets']) {
     setSettings((s) => (s ? { ...s, tickets } : s));
+    markDirty();
+  }
+  function setApplications(applications: Settings['applications']) {
+    setSettings((s) => (s ? { ...s, applications } : s));
+    markDirty();
+  }
+  function setFaq(faq: Settings['faq']) {
+    setSettings((s) => (s ? { ...s, faq } : s));
     markDirty();
   }
   function setEconomy(economy: Settings['economy']) {
     setSettings((s) => (s ? { ...s, economy } : s));
     markDirty();
   }
+  function setGiveaways(giveaways: Settings['giveaways']) {
+    setSettings((s) => (s ? { ...s, giveaways } : s));
+    markDirty();
+  }
   function setMusic(music: Settings['music']) {
     setSettings((s) => (s ? { ...s, music } : s));
+    markDirty();
+  }
+  function setPlaylists(playlists: Settings['playlists']) {
+    setSettings((s) => (s ? { ...s, playlists } : s));
+    markDirty();
+  }
+  function setLeveling(leveling: Settings['leveling']) {
+    setSettings((s) => (s ? { ...s, leveling } : s));
     markDirty();
   }
 
   async function save() {
     if (!settings) return;
     setSaving(true);
-    const res = await fetch(`/api/bot/${appId}/config`, {
+    const res = await fetch(withBase(`/api/bot/${appId}/config`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ settings }),
@@ -162,7 +232,7 @@ export default function EditorPage() {
         <TopBar />
         <main className="container-content py-16 text-center">
           <p className="text-mist-muted">{error || 'Something went wrong.'}</p>
-          <a href="/dashboard" className="btn-ghost mt-6">
+          <a href={withBase('/bots')} className="btn-ghost mt-6">
             ← Back to dashboard
           </a>
         </main>
@@ -189,12 +259,14 @@ export default function EditorPage() {
   const visibleModules = MODULES.filter((m) => features.modules.includes(m.key));
   const canControlProcess = isOwner || perms.includes('process');
   const canEditAnything = isOwner || editableTabs.length > 0;
+  const visibleIds = new Set<Tab>(visibleTabs.map((t) => t.id));
+  const labelOf = (id: Tab) => visibleTabs.find((t) => t.id === id)?.label ?? id;
 
   return (
     <>
       <TopBar />
       <main className="container-content py-10">
-        <a href="/dashboard" className="text-sm text-mist-muted transition-colors hover:text-mist">
+        <a href={withBase('/bots')} className="text-sm text-mist-muted transition-colors hover:text-mist">
           ← All bots
         </a>
 
@@ -228,26 +300,58 @@ export default function EditorPage() {
           <ProcessControl appId={appId} canControl={canControlProcess} />
         </div>
 
-        {/* Tabs */}
-        <div className="mt-8 flex gap-1 border-b border-ink-700">
-          {visibleTabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`relative px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === t.id ? 'text-mist' : 'text-mist-muted hover:text-mist'
-              }`}
-            >
-              {t.label}
-              {tab === t.id && (
-                <motion.span layoutId="tab-underline" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-accent" />
-              )}
-            </button>
-          ))}
-        </div>
-
         <GuildProvider guild={guild}>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-col gap-6 lg:flex-row lg:gap-10">
+          {/* Mobile: grouped dropdown nav */}
+          <div className="lg:hidden">
+            <select className="input" value={tab} onChange={(e) => setTab(e.target.value as Tab)}>
+              {TAB_GROUPS.map((g) => {
+                const items = g.tabs.filter((id) => visibleIds.has(id));
+                if (!items.length) return null;
+                return (
+                  <optgroup key={g.label} label={g.label}>
+                    {items.map((id) => (
+                      <option key={id} value={id}>
+                        {labelOf(id)}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Desktop: grouped sidebar nav */}
+          <nav className="sticky top-24 hidden w-56 shrink-0 space-y-6 self-start lg:block">
+            {TAB_GROUPS.map((g) => {
+              const items = g.tabs.filter((id) => visibleIds.has(id));
+              if (!items.length) return null;
+              return (
+                <div key={g.label}>
+                  <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-mist-faint">{g.label}</p>
+                  <div className="mt-2 space-y-0.5">
+                    {items.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => setTab(id)}
+                        className={`relative flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                          tab === id ? 'bg-ink-800 text-mist' : 'text-mist-muted hover:bg-ink-900/70 hover:text-mist'
+                        }`}
+                      >
+                        {tab === id && (
+                          <motion.span layoutId="nav-active" className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-accent" />
+                        )}
+                        {labelOf(id)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* Content */}
+          <div className="min-w-0 flex-1">
           {tab === 'basics' && (
             <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card max-w-xl p-6">
               <h2 className="font-display text-xl font-semibold">Basics</h2>
@@ -305,9 +409,39 @@ export default function EditorPage() {
             </motion.div>
           )}
 
+          {tab === 'verification' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <VerificationEditor value={settings.verification ?? defaultVerification()} onChange={setVerification} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
+            </motion.div>
+          )}
+
+          {tab === 'reactionroles' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <ReactionRolesEditor value={settings.reactionRoles ?? defaultReactionRoles()} onChange={setReactionRoles} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
+            </motion.div>
+          )}
+
+          {tab === 'antinuke' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <AntiNukeEditor value={settings.antiNuke ?? defaultAntiNuke()} onChange={setAntiNuke} />
+            </motion.div>
+          )}
+
           {tab === 'tickets' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <TicketsEditor value={settings.tickets ?? defaultTickets()} onChange={setTickets} />
+              <TicketsEditor value={settings.tickets ?? defaultTickets()} onChange={setTickets} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
+            </motion.div>
+          )}
+
+          {tab === 'applications' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <ApplicationsEditor value={settings.applications ?? defaultApplications()} onChange={setApplications} />
+            </motion.div>
+          )}
+
+          {tab === 'faq' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <FaqEditor value={settings.faq ?? defaultFaq()} onChange={setFaq} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
             </motion.div>
           )}
 
@@ -317,9 +451,27 @@ export default function EditorPage() {
             </motion.div>
           )}
 
+          {tab === 'giveaways' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <GiveawaysEditor value={settings.giveaways ?? defaultGiveaways()} onChange={setGiveaways} />
+            </motion.div>
+          )}
+
           {tab === 'music' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <MusicEditor value={settings.music ?? defaultMusic()} onChange={setMusic} />
+            </motion.div>
+          )}
+
+          {tab === 'playlists' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <PlaylistsEditor value={settings.playlists ?? defaultPlaylists()} onChange={setPlaylists} />
+            </motion.div>
+          )}
+
+          {tab === 'leveling' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <LevelingEditor value={settings.leveling ?? defaultLeveling()} onChange={setLeveling} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
             </motion.div>
           )}
 
@@ -359,6 +511,7 @@ export default function EditorPage() {
               />
             </motion.div>
           )}
+          </div>
         </div>
         </GuildProvider>
       </main>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Spinner } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 
 type LogLine = { t: number; line: string; level: 'out' | 'err' | 'sys' };
 
@@ -26,7 +27,7 @@ export function BotLogs({ appId }: { appId: string }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/bot/${appId}/logs`, { cache: 'no-store' });
+      const res = await fetch(withBase(`/api/bot/${appId}/logs`), { cache: 'no-store' });
       const data = await res.json();
       if (data.ok) {
         setLogs(data.logs || []);

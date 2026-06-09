@@ -20,15 +20,33 @@ export function MusicEditor({ value, onChange }: { value: MusicSettings; onChang
           <span>tracks</span>
         </StatRow>
         <StatRow>
+          <span className="text-mist">Max track length</span>
+          <NumInput value={value.maxTrackMinutes} min={0} max={1440} width="w-24" onChange={(maxTrackMinutes) => set({ maxTrackMinutes })} />
+          <span>minutes (0 = no limit)</span>
+        </StatRow>
+        <StatRow>
           <span className="text-mist">Auto-leave when empty after</span>
           <NumInput value={value.autoLeaveSec} min={0} max={3600} width="w-24" onChange={(autoLeaveSec) => set({ autoLeaveSec })} />
           <span>seconds (0 = never)</span>
         </StatRow>
+        <Row label="24/7 mode" hint="Stay connected even when the channel is empty — never auto-leave." checked={value.stay247} onChange={(stay247) => set({ stay247 })} />
       </Card>
 
       <Card title="DJ permissions" desc="Restrict who can control playback.">
         <Row label="DJ-only controls" hint="Only DJ roles can skip, stop, and manage the queue." checked={value.djOnly} onChange={(djOnly) => set({ djOnly })} />
         <RolesField label="DJ roles" hint="Members with these roles get full player control." value={value.djRoleIds} onChange={(djRoleIds) => set({ djRoleIds })} />
+        <Row
+          label="Vote-skip"
+          hint="Let listeners vote to skip the current track."
+          checked={value.voteSkip.enabled}
+          onChange={(enabled) => set({ voteSkip: { ...value.voteSkip, enabled } })}
+        >
+          <div className="flex flex-wrap items-center gap-2 text-sm text-mist-muted">
+            <span>Skip at</span>
+            <NumInput value={value.voteSkip.percent} min={1} max={100} onChange={(percent) => set({ voteSkip: { ...value.voteSkip, percent } })} />
+            <span>% of listeners</span>
+          </div>
+        </Row>
       </Card>
 
       <Card title="Features">

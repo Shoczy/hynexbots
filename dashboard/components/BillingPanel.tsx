@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 import type { Order, License } from '@/lib/configApi';
 
 const STATUS_STYLES: Record<Order['status'], string> = {
@@ -30,7 +31,7 @@ export function BillingPanel() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/me/billing', { cache: 'no-store' });
+        const res = await fetch(withBase('/api/me/billing'), { cache: 'no-store' });
         const data = await res.json();
         if (data.ok) {
           setOrders(data.orders || []);

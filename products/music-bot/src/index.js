@@ -17,11 +17,12 @@ if (!config.api.botKey) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates, // join/track voice channels
+    GatewayIntentBits.GuildVoiceStates, // join/track voice channels + voice leveling
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent, // privileged — for prefix commands
+    GatewayIntentBits.GuildMembers, // privileged — for welcome / auto-roles / level rewards
   ],
-  partials: [Partials.Channel],
+  partials: [Partials.Channel, Partials.GuildMember, Partials.User],
 });
 
 // ── Load slash commands ──────────────────────────────

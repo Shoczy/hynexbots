@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { TopBar } from '@/components/TopBar';
 import { Field, Spinner } from '@/components/ui';
 import { BillingPanel } from '@/components/BillingPanel';
+import { withBase } from '@/lib/paths';
 
 type User = { id: string; username: string; global_name?: string | null; avatar: string | null };
 type Bot = {
@@ -20,20 +21,24 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [bots, setBots] = useState<Bot[]>([]);
+  const [serviceDown, setServiceDown] = useState(false);
 
   const [key, setKey] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   async function load() {
-    const res = await fetch('/api/me', { cache: 'no-store' });
+    const res = await fetch(withBase('/api/me'), { cache: 'no-store' });
     if (res.status === 401) {
-      window.location.href = '/';
+      window.location.href = withBase('/');
       return;
     }
-    const data = await res.json();
-    setUser(data.user);
-    setBots(data.bots || []);
+    const data = await res.json().catch(() => null);
+    if (data) {
+      setUser(data.user ?? null);
+      setBots(data.bots || []);
+      setServiceDown(data.serviceUp === false);
+    }
     setLoading(false);
   }
 
@@ -45,7 +50,7 @@ export default function DashboardPage() {
     e.preventDefault();
     setRedeeming(true);
     setMsg(null);
-    const res = await fetch('/api/redeem', {
+    const res = await fetch(withBase('/api/redeem'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key: key.trim() }),
@@ -86,12 +91,18 @@ export default function DashboardPage() {
           <p className="mt-1.5 text-mist-muted">Select a bot to customize, or claim a new one with a key.</p>
         </motion.div>
 
+        {serviceDown && (
+          <div className="mt-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+            Can’t reach the bot service right now — your bots will appear once it’s back online.
+          </div>
+        )}
+
         {/* Bots */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {bots.map((b, i) => (
             <motion.a
               key={b.appId}
-              href={`/dashboard/${b.appId}`}
+              href={withBase(`/bots/${b.appId}`)}
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.06 }}

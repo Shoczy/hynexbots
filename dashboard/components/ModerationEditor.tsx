@@ -153,7 +153,18 @@ export function ModerationEditor({
           <Row label="Bans & kicks" checked={lg.events.banKick} onChange={(v) => setLogging({ events: { ...lg.events, banKick: v } })} />
           <Row label="Role changes" checked={lg.events.roleChange} onChange={(v) => setLogging({ events: { ...lg.events, roleChange: v } })} />
           <Row label="Nickname changes" checked={lg.events.nicknameChange} onChange={(v) => setLogging({ events: { ...lg.events, nicknameChange: v } })} />
+          <Row label="Voice joins & leaves" checked={lg.events.voiceJoinLeave} onChange={(v) => setLogging({ events: { ...lg.events, voiceJoinLeave: v } })} />
         </div>
+      </Card>
+
+      {/* Notifications */}
+      <Card title="Notifications" desc="How the bot communicates moderation actions.">
+        <Row
+          label="DM members on action"
+          hint="Send the member a DM with the reason when they're warned, muted, kicked or banned."
+          checked={value.dmOnPunish}
+          onChange={(dmOnPunish) => onChange({ ...value, dmOnPunish })}
+        />
       </Card>
 
       {/* Roles */}

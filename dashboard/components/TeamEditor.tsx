@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 import { EDIT_TABS, permLabel } from '@/lib/permissions';
 import type { TeamMember, AuditEntry } from '@/lib/configApi';
 
@@ -21,7 +22,7 @@ export function TeamEditor({ appId }: { appId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/bot/${appId}/members`, { cache: 'no-store' });
+      const res = await fetch(withBase(`/api/bot/${appId}/members`), { cache: 'no-store' });
       const data = await res.json();
       if (!data.ok) {
         setError(data.error || 'Failed to load team.');
@@ -43,7 +44,7 @@ export function TeamEditor({ appId }: { appId: string }) {
   }, [load]);
 
   async function mutate(init: RequestInit) {
-    const res = await fetch(`/api/bot/${appId}/members`, {
+    const res = await fetch(withBase(`/api/bot/${appId}/members`), {
       headers: { 'Content-Type': 'application/json' },
       ...init,
     });
@@ -129,7 +130,7 @@ function ActivityLog({ appId }: { appId: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`/api/bot/${appId}/audit`, { cache: 'no-store' });
+        const res = await fetch(withBase(`/api/bot/${appId}/audit`), { cache: 'no-store' });
         const data = await res.json();
         if (data.ok) setEntries(data.entries || []);
         else setEntries([]);

@@ -5,7 +5,9 @@ const API = 'https://discord.com/api/v10';
 export const env = {
   clientId: process.env.DISCORD_CLIENT_ID || '',
   clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-  redirectUri: process.env.DISCORD_REDIRECT_URI || 'http://localhost:3001/api/auth/callback',
+  // Single-origin: the callback lives under the site's /dashboard base path.
+  // Register this exact URL in the Discord Developer Portal → OAuth2 → Redirects.
+  redirectUri: process.env.DISCORD_REDIRECT_URI || 'http://localhost:3000/dashboard/api/auth/callback',
 };
 
 export type DiscordUser = {

@@ -122,13 +122,20 @@ The buyer owns the bot and can invite admins to co-manage.
 cd dashboard
 npm install
 cp .env.local.example .env.local   # fill in Discord OAuth + API key
-npm run dev                          # http://localhost:3001
+npm run dev                          # runs on :3001, reached at http://localhost:3000/dashboard
 ```
 
+The dashboard is mounted under **`/dashboard`** and served through the public
+site on a single origin: the website ([`website/`](website)) proxies
+`/dashboard/*` to this app (`DASHBOARD_ORIGIN`, default `http://localhost:3001`).
+So in dev you run both apps and open **`http://localhost:3000/dashboard`** — the
+`:3001` port is just where this app listens behind the proxy.
+
 In the [Discord Developer Portal](https://discord.com/developers/applications)
-→ OAuth2, add the redirect URL `http://localhost:3001/api/auth/callback` (plus
-your production URL). Only the `identify` scope is requested. Set
-`DASHBOARD_API_KEY` to the **same value** as in the bot's `.env`.
+→ OAuth2, add the redirect URL `http://localhost:3000/dashboard/api/auth/callback`
+(plus your production URL — note the `/dashboard` prefix). Only the `identify`
+scope is requested. Set `DASHBOARD_API_KEY` to the **same value** as in the
+bot's `.env`.
 
 ### How settings reach the bot
 

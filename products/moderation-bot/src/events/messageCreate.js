@@ -3,6 +3,7 @@
 const { Events } = require('discord.js');
 const { handleMessage } = require('../automod');
 const { handlePrefix } = require('../prefix');
+const leveling = require('../leveling');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -13,6 +14,8 @@ module.exports = {
       const acted = await handleMessage(message);
       if (acted) return;
       await handlePrefix(message);
+      // Award leveling XP for the message (cooldown enforced inside).
+      await leveling.handleMessage(message);
     } catch (e) {
       console.error('messageCreate handler error:', e);
     }

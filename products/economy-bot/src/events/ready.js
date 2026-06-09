@@ -82,6 +82,13 @@ module.exports = {
       guild.members.me?.setNickname(cfg('basics.nickname', '') || null).catch(() => {});
     });
 
+    // Re-arm any in-progress giveaways across a restart.
+    try {
+      require('../giveaways').restore(client);
+    } catch (e) {
+      console.error('giveaway restore failed:', e);
+    }
+
     console.log(`✔ Hynex Economy bot online as ${client.user.tag} (app ${appId}) in ${client.guilds.cache.size} server(s).`);
   },
 };

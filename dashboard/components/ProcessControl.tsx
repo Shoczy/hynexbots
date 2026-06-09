@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ProcessStatus } from '@/lib/configApi';
 import { Spinner } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 
 function uptimeLabel(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -33,7 +34,7 @@ export function ProcessControl({ appId, canControl = true }: { appId: string; ca
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/bot/${appId}/process`, { cache: 'no-store' });
+      const res = await fetch(withBase(`/api/bot/${appId}/process`), { cache: 'no-store' });
       const data = await res.json();
       if (data.ok) {
         setStatus(data.process);
@@ -59,7 +60,7 @@ export function ProcessControl({ appId, canControl = true }: { appId: string; ca
     setBusy(action);
     setError(null);
     try {
-      const res = await fetch(`/api/bot/${appId}/process`, {
+      const res = await fetch(withBase(`/api/bot/${appId}/process`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),

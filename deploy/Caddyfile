@@ -2,28 +2,27 @@
 #  Hynex Bots — Caddy reverse proxy with automatic HTTPS
 # ─────────────────────────────────────────────────────────────
 #
-# Caddy fronts the main bot's HTTP server (fleet heartbeats + the customer
-# config API, default port 8787) and terminates TLS for you — it provisions and
-# renews Let's Encrypt certificates automatically. No certbot, no cron.
+# This box runs the MAIN BOT only (Discord client + the Express config/fleet API
+# on port 8787, and it spawns the sold product bots locally). Website + dashboard
+# live on Vercel, so Caddy here only needs to put TLS in front of the bot API —
+# remote VPS agents and the public status page reach it over HTTPS.
 #
-#   sudo apt install caddy           # or see https://caddyserver.com/docs/install
-#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile   # edit the domains first
+#   sudo cp deploy/Caddyfile /etc/caddy/Caddyfile   # edit the domain first!
 #   sudo systemctl reload caddy
 #
 # Requirements:
-#   • DNS A/AAAA records for each domain below pointing at this host.
+#   • DNS A/AAAA record for api.yourdomain.com → this host.
 #   • Ports 80 and 443 open (Caddy needs 80 for the ACME challenge).
 #   • The bot's FLEET_PORT stays bound to localhost — only Caddy is public.
 #
-# After this is live, point the apps at the HTTPS URLs:
-#   dashboard  CONFIG_API_URL=https://api.example.com
-#   website    NEXT_PUBLIC_FLEET_STATUS_URL=https://api.example.com/public/status
+# Then on Vercel:
+#   dashboard  CONFIG_API_URL                = https://api.yourdomain.com
+#   website    NEXT_PUBLIC_FLEET_STATUS_URL  = https://api.yourdomain.com/public/status
 
-# Main bot API — fleet heartbeats + dashboard/bot config service.
-api.example.com {
+api.yourdomain.com {
 	encode zstd gzip
 
-	# Agents and the dashboard send a bit of JSON; keep bodies bounded.
+	# Agents and the dashboard send small JSON payloads; keep bodies bounded.
 	request_body {
 		max_size 512KB
 	}
@@ -36,15 +35,12 @@ api.example.com {
 	}
 }
 
-# Optional: the storefront website, if you host it on this box too.
-# (On Vercel you don't need this — Vercel handles TLS.)
-# hynexbots.com, www.hynexbots.com {
+# ── Self-hosting the frontends instead of Vercel? ─────────────
+# If you ever move the website + dashboard onto this box (PM2: next start on
+# :3000 and :3001), uncomment below. The website already proxies /dashboard to
+# the dashboard internally, so only the website needs to be public.
+#
+# yourdomain.com, www.yourdomain.com {
 # 	encode zstd gzip
 # 	reverse_proxy localhost:3000
-# }
-
-# Optional: the customer dashboard, if self-hosted on this box.
-# dashboard.hynexbots.com {
-# 	encode zstd gzip
-# 	reverse_proxy localhost:3001
 # }

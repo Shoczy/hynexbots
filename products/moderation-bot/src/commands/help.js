@@ -10,20 +10,40 @@ module.exports = {
 
   async execute(interaction) {
     const prefix = cfg('basics.prefix', '!');
-    const e = info('🛡️ Moderation Commands')
-      .addFields(
-        {
-          name: 'Moderation',
-          value:
-            '`/ban` `/kick` `/mute` `/unmute` `/warn` `/warnings` `/purge` `/lockdown`',
-        },
-        { name: 'Utility', value: '`/help` `/ping` `/serverinfo` `/userinfo` `/avatar`' },
-        {
-          name: 'Prefix commands',
-          value: `Text commands also work with your prefix: \`${prefix}ban @user\`, \`${prefix}warn @user reason\`, etc.`,
-        },
-      )
-      .setFooter({ text: 'Configure auto-mod, anti-raid, warnings & logging in your Hynex dashboard.' });
+    const fields = [
+      {
+        name: '🛡️ Moderation',
+        value: '`/ban` `/kick` `/mute` `/unmute` `/warn` `/warnings` `/purge` `/lockdown` `/slowmode`',
+      },
+    ];
+
+    if (cfg('modules.verification', false)) {
+      fields.push({ name: '✅ Verification', value: '`/verify-panel` — post the verify button members click to gain access.' });
+    }
+    if (cfg('modules.reactionroles', false)) {
+      fields.push({ name: '🎭 Reaction Roles', value: '`/roles-panel` — post a panel where members self-assign roles.' });
+    }
+    if (cfg('modules.leveling', false)) {
+      fields.push({ name: '⭐ Leveling', value: '`/rank` `/levels` `/setxp` — XP, ranks and role rewards.' });
+    }
+    if (cfg('modules.antinuke', false)) {
+      fields.push({ name: '🛡️ Anti-Nuke', value: 'Auto-stops mass bans/deletes by rogue admins. Configure limits in your dashboard.' });
+    }
+    if (cfg('modules.welcome', false)) {
+      fields.push({ name: '👋 Welcome', value: 'Auto-roles and welcome/goodbye messages — set them up in your dashboard.' });
+    }
+
+    fields.push(
+      { name: '🔧 Utility', value: '`/help` `/ping` `/serverinfo` `/userinfo` `/avatar`' },
+      {
+        name: 'Prefix commands',
+        value: `Text commands also work with your prefix: \`${prefix}ban @user\`, \`${prefix}warn @user reason\`, etc.`,
+      },
+    );
+
+    const e = info('🛡️ Server Guardian — Commands')
+      .addFields(fields)
+      .setFooter({ text: 'Configure every module in your Hynex dashboard.' });
     return interaction.reply({ embeds: [e], ephemeral: true });
   },
 };

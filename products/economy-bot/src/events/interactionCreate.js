@@ -3,10 +3,23 @@
 const { Events } = require('discord.js');
 const { authorize, DENY_MESSAGE } = require('../lib/perms');
 const { err } = require('../lib/embeds');
+const { ENTER_PREFIX, handleEnter } = require('../giveaways');
 
 module.exports = {
   name: Events.InteractionCreate,
   async execute(interaction, client) {
+    // Giveaway entry button.
+    if (interaction.isButton()) {
+      if (interaction.customId.startsWith(ENTER_PREFIX)) {
+        try {
+          await handleEnter(interaction);
+        } catch (e) {
+          console.error('giveaway button failed:', e);
+        }
+      }
+      return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
     const command = client.commands.get(interaction.commandName);
     if (!command) return;

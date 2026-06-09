@@ -175,14 +175,51 @@ function defaultSettings() {
       welcome: messageBlock(),
       leave: messageBlock(),
       autoresponses: [], // [{ id, trigger, match, reply, enabled }]
+      autoRoleIds: [], // roles auto-assigned to members on join
     },
     // Per-command permissions: { [command]: { enabled, roles[] } }.
     commands: {},
     // Per-product tailored settings (only the matching bot's section is shown).
     moderation: moderationDefaults(),
+    verification: verificationDefaults(),
+    reactionRoles: reactionRolesDefaults(),
+    antiNuke: antiNukeDefaults(),
     tickets: ticketsDefaults(),
+    applications: applicationsDefaults(),
+    faq: faqDefaults(),
     economy: economyDefaults(),
+    giveaways: giveawaysDefaults(),
     music: musicDefaults(),
+    playlists: playlistsDefaults(),
+    leveling: levelingDefaults(),
+  };
+}
+
+/** Saved-playlist settings (the playlists themselves live in the bot's local db). */
+function playlistsDefaults() {
+  return {
+    djOnly: false, // restrict save/delete to DJ roles
+    maxPerGuild: 25, // cap stored playlists per server
+  };
+}
+
+/** Giveaways: who may run them and an optional default entry-gate role. */
+function giveawaysDefaults() {
+  return {
+    managerRoleIds: [], // roles allowed to start/end/reroll (besides admins)
+    requireRoleId: '', // optional default role required to enter
+  };
+}
+
+/** Tailored config for the verification gate: a button members click to gain access. */
+function verificationDefaults() {
+  return {
+    channelId: '', // where the verification panel is posted
+    roleId: '', // role granted when a member verifies
+    title: 'Verify to continue',
+    description: 'Click the button below to confirm you’re human and unlock the server.',
+    buttonLabel: 'Verify',
+    successMessage: 'You’re verified — welcome aboard! 🎉',
   };
 }
 
@@ -216,12 +253,38 @@ function moderationDefaults() {
         banKick: false,
         roleChange: false,
         nicknameChange: false,
+        voiceJoinLeave: false,
       },
     },
     roles: {
       muteRoleId: '',
       modRoleIds: [],
     },
+    dmOnPunish: false, // DM the member the reason when they're warned/muted/kicked/banned
+  };
+}
+
+/** Self-assign role panels: members click buttons to toggle the configured roles. */
+function reactionRolesDefaults() {
+  return {
+    // [{ id, channelId, title, description, roles: [{ id, roleId, label, emoji }] }]
+    panels: [],
+  };
+}
+
+/** Anti-nuke: throttle mass destructive actions by rogue/compromised admins. */
+function antiNukeDefaults() {
+  return {
+    punishment: 'strip', // strip | ban | kick — applied to an offender over a limit
+    limits: {
+      channelDelete: { enabled: true, max: 3, perSeconds: 30 },
+      roleDelete: { enabled: true, max: 3, perSeconds: 30 },
+      ban: { enabled: true, max: 5, perSeconds: 30 },
+      kick: { enabled: true, max: 5, perSeconds: 30 },
+    },
+    whitelistUserIds: [], // trusted users exempt from limits
+    whitelistRoleIds: [], // holders of these roles are exempt
+    alertChannelId: '', // where anti-nuke alerts are posted (falls back to the mod log)
   };
 }
 
@@ -229,10 +292,13 @@ function moderationDefaults() {
 function ticketsDefaults() {
   return {
     staffRoleIds: [],
+    pingRoleIds: [], // roles pinged when a new ticket opens
     categoryId: '', // Discord category channel new tickets are created under
     transcripts: { enabled: false, channelId: '' },
     claiming: false, // staff "claim" system
     maxOpenPerUser: 1,
+    autoClose: { enabled: false, hours: 48 }, // auto-close after inactivity
+    feedback: false, // ask the member to rate support when a ticket closes
     openMessage: 'Thanks for reaching out — a staff member will be with you shortly.',
     panel: {
       title: 'Need help?',
@@ -243,6 +309,25 @@ function ticketsDefaults() {
   };
 }
 
+/** Application forms: members fill a modal, staff approve/deny in a review channel. */
+function applicationsDefaults() {
+  return {
+    reviewChannelId: '', // where submissions are posted for staff review
+    approveRoleId: '', // role granted on approval (optional)
+    // [{ id, name, description, questions: [{ id, label, style: short|paragraph, required }] }]
+    forms: [],
+  };
+}
+
+/** Auto-answering FAQ: keyword-matched canned replies + a /faq lookup command. */
+function faqDefaults() {
+  return {
+    autoAnswer: true, // reply automatically when a message matches an entry
+    // [{ id, keywords: [..], answer, match: contains|exact }]
+    entries: [],
+  };
+}
+
 /** Tailored config for economy bots. */
 function economyDefaults() {
   return {
@@ -250,7 +335,10 @@ function economyDefaults() {
     currencySymbol: '🪙',
     startingBalance: 100,
     daily: { enabled: true, amount: 250, streakBonus: 50 },
+    weekly: { enabled: false, amount: 1000 },
     work: { enabled: true, min: 50, max: 200, cooldownSec: 3600 },
+    rob: { enabled: false, successPercent: 50, cooldownSec: 86400 }, // steal from other members
+    payTax: 0, // % fee taken on /pay transfers (0–50)
     gambling: false, // coinflip / slots
     leaderboard: true,
     shop: [], // [{ id, name, price, roleId, description }]
@@ -262,11 +350,30 @@ function musicDefaults() {
   return {
     defaultVolume: 50,
     maxQueueLength: 100,
+    maxTrackMinutes: 0, // reject tracks longer than this (0 = no limit)
     djRoleIds: [],
     djOnly: false, // restrict playback controls to DJ roles
+    voteSkip: { enabled: false, percent: 50 }, // listeners can vote to skip
     autoLeaveSec: 60, // leave when the channel is empty (0 = never)
+    stay247: false, // 24/7 mode — never auto-leave
     allowFilters: true, // audio filters/effects
     announceNowPlaying: true,
+  };
+}
+
+/** Tailored config for leveling bots: XP gain, level-up announce, role rewards. */
+function levelingDefaults() {
+  return {
+    xpPerMessage: { min: 15, max: 25 },
+    cooldownSec: 60, // min seconds between XP-earning messages
+    levelUp: {
+      enabled: true,
+      channelId: '', // empty = announce in the channel they leveled up in
+      message: 'GG {user}, you reached level {level}! 🎉',
+    },
+    stackRewards: true, // keep lower reward roles when a higher one is earned
+    rewards: [], // [{ id, level, roleId }] — role granted at a level
+    noXpRoleIds: [], // members with these roles earn no XP
   };
 }
 

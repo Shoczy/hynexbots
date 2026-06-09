@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Field, Spinner } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 import type { LicenseInfo } from '@/lib/configApi';
 
 function fmtDate(ts: number | null): string {
@@ -23,7 +24,7 @@ export function LicensePanel({ appId }: { appId: string }) {
 
   async function load() {
     try {
-      const res = await fetch(`/api/bot/${appId}/license`, { cache: 'no-store' });
+      const res = await fetch(withBase(`/api/bot/${appId}/license`), { cache: 'no-store' });
       const data = await res.json();
       if (data.ok) setLicense(data.license);
       else setFailed(true);
@@ -54,7 +55,7 @@ export function LicensePanel({ appId }: { appId: string }) {
     if (!confirm('Generate a new backup key? The current key will stop working immediately.')) return;
     setRegenerating(true);
     setMsg(null);
-    const res = await fetch(`/api/bot/${appId}/license`, {
+    const res = await fetch(withBase(`/api/bot/${appId}/license`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'regenerate' }),
@@ -80,7 +81,7 @@ export function LicensePanel({ appId }: { appId: string }) {
     if (!confirm(`Transfer this bot to user ${target}? You will lose owner access immediately.`)) return;
     setTransferring(true);
     setMsg(null);
-    const res = await fetch(`/api/bot/${appId}/license`, {
+    const res = await fetch(withBase(`/api/bot/${appId}/license`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'transfer', newOwnerId: target }),
@@ -89,7 +90,7 @@ export function LicensePanel({ appId }: { appId: string }) {
     setTransferring(false);
     if (data.ok) {
       setMsg({ type: 'ok', text: 'Ownership transferred. Redirecting…' });
-      setTimeout(() => (window.location.href = '/dashboard'), 1200);
+      setTimeout(() => (window.location.href = withBase('/bots')), 1200);
     } else {
       const human: Record<string, string> = {
         invalid_user_id: 'That isn’t a valid Discord user ID.',

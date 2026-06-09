@@ -5,11 +5,23 @@
  * service's defaultSettings() (bot/src/config-service/db.js). Used before the
  * first config fetch and as a backstop for missing fields.
  */
+function messageBlock() {
+  return {
+    enabled: false,
+    channelId: '',
+    text: '',
+    embed: { enabled: false, title: '', description: '', color: '#6366f1', image: '', footer: '' },
+  };
+}
+
 function defaultSettings() {
   return {
     basics: { prefix: '!', embedColor: '#6366f1', nickname: '', language: 'en', logChannelId: '' },
-    modules: { tickets: true },
+    modules: { tickets: true, applications: false, faq: false, welcome: false },
     commands: {}, // { [name]: { enabled, roles[] } }
+    messages: { welcome: messageBlock(), leave: messageBlock(), autoresponses: [], autoRoleIds: [] },
+    applications: { reviewChannelId: '', approveRoleId: '', forms: [] },
+    faq: { autoAnswer: true, entries: [] },
     tickets: {
       staffRoleIds: [],
       categoryId: '',

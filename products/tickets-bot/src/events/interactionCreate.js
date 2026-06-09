@@ -4,6 +4,7 @@ const { Events } = require('discord.js');
 const { authorize, DENY_MESSAGE } = require('../lib/perms');
 const { err } = require('../lib/embeds');
 const manager = require('../lib/manager');
+const applications = require('../applications');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -15,16 +16,31 @@ module.exports = {
       return;
     }
 
-    // ── Panel button / topic select ──
+    // ── Application modal submissions ──
+    if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith(applications.MODAL_PREFIX)) {
+        try {
+          await applications.handleModal(interaction);
+        } catch (e) {
+          console.error('application modal error:', e);
+        }
+      }
+      return;
+    }
+
+    // ── Panel button / topic select / application decisions ──
     if (interaction.isButton() || interaction.isStringSelectMenu()) {
-      const ctx = manager.ctxFromInteraction(interaction);
       try {
+        if (interaction.isButton() && interaction.customId.startsWith(applications.DECISION_PREFIX)) {
+          return applications.handleDecision(interaction);
+        }
+        const ctx = manager.ctxFromInteraction(interaction);
         if (interaction.customId === manager.ID.OPEN) return manager.openTicket(ctx);
         if (interaction.customId === manager.ID.TOPIC) return manager.openTicket(ctx, interaction.values?.[0]);
         if (interaction.customId === manager.ID.CLOSE) return manager.closeTicket(ctx);
         if (interaction.customId === manager.ID.CLAIM) return manager.claim(ctx);
       } catch (e) {
-        console.error('ticket component error:', e);
+        console.error('component error:', e);
       }
       return;
     }

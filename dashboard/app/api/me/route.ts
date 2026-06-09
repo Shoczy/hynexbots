@@ -9,5 +9,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
 
   const { json } = await configApi.myBots(session.user.id);
-  return NextResponse.json({ ok: true, user: session.user, bots: json.bots || [] });
+  // `serviceUp` lets the UI distinguish "no bots yet" from "backend unreachable".
+  const serviceUp = json?.error !== 'service_unavailable';
+  return NextResponse.json({ ok: true, user: session.user, bots: json?.bots || [], serviceUp });
 }

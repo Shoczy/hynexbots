@@ -3,13 +3,19 @@ const BASE = (process.env.CONFIG_API_URL || 'http://localhost:8787').replace(/\/
 const KEY = process.env.DASHBOARD_API_KEY || '';
 
 async function call(path: string, init: RequestInit = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', 'x-api-key': KEY, ...(init.headers || {}) },
-    cache: 'no-store',
-  });
-  const json = await res.json().catch(() => ({ ok: false, error: 'bad_response' }));
-  return { status: res.status, json };
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', 'x-api-key': KEY, ...(init.headers || {}) },
+      cache: 'no-store',
+    });
+    const json = await res.json().catch(() => ({ ok: false, error: 'bad_response' }));
+    return { status: res.status, json };
+  } catch {
+    // Config service unreachable (down / wrong CONFIG_API_URL). Return a clean
+    // JSON envelope so dashboard routes never crash on a backend hiccup.
+    return { status: 503, json: { ok: false, error: 'service_unavailable' } };
+  }
 }
 
 export type BotSummary = {

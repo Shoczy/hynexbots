@@ -1,6 +1,7 @@
 'use client';
 
 import { Logo } from './ui';
+import { withBase } from '@/lib/paths';
 
 type User = { id: string; username: string; global_name?: string | null; avatar: string | null };
 
@@ -13,7 +14,7 @@ export function TopBar({ user }: { user?: User | null }) {
   return (
     <header className="sticky top-0 z-30 border-b border-ink-700/60 bg-ink-950/70 backdrop-blur-xl">
       <div className="container-content flex items-center justify-between py-4">
-        <a href="/dashboard">
+        <a href={withBase('/bots')}>
           <Logo />
         </a>
         {user && (
@@ -23,7 +24,7 @@ export function TopBar({ user }: { user?: User | null }) {
               <img src={avatarUrl(user)} alt="" className="h-7 w-7 rounded-full" />
               <span className="text-sm font-medium text-mist">{user.global_name || user.username}</span>
             </div>
-            <a href="/api/auth/logout" className="text-sm text-mist-muted transition-colors hover:text-mist">
+            <a href={withBase('/api/auth/logout')} className="text-sm text-mist-muted transition-colors hover:text-mist">
               Log out
             </a>
           </div>

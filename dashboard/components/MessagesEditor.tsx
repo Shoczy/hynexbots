@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Field, Toggle } from './ui';
+import { Card, RolesField } from './settingsKit';
 import { DiscordPreview } from './DiscordPreview';
 import { MATCH_MODES, VARIABLES, type Settings, type MessageBlock, type AutoResponse } from '@/lib/settings';
 
@@ -40,6 +41,10 @@ export function MessagesEditor({
         items={value.autoresponses}
         onChange={(autoresponses) => onChange({ ...value, autoresponses })}
       />
+
+      <Card title="Auto-roles" desc="Roles automatically given to every member when they join.">
+        <RolesField label="Roles on join" value={value.autoRoleIds} onChange={(autoRoleIds) => onChange({ ...value, autoRoleIds })} />
+      </Card>
     </div>
   );
 }

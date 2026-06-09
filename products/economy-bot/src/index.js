@@ -18,9 +18,10 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent, // privileged — for prefix commands
+    GatewayIntentBits.MessageContent, // privileged — for prefix commands + leveling XP
+    GatewayIntentBits.GuildMembers, // privileged — for welcome / auto-roles / level rewards
   ],
-  partials: [Partials.Channel, Partials.Message],
+  partials: [Partials.Channel, Partials.Message, Partials.GuildMember, Partials.User],
 });
 
 // ── Load slash commands ──────────────────────────────

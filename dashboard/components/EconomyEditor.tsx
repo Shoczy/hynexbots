@@ -6,7 +6,9 @@ import type { EconomySettings, ShopItem } from '@/lib/settings';
 export function EconomyEditor({ value, onChange }: { value: EconomySettings; onChange: (e: EconomySettings) => void }) {
   const set = (patch: Partial<EconomySettings>) => onChange({ ...value, ...patch });
   const dy = value.daily;
+  const wy = value.weekly;
   const wk = value.work;
+  const rb = value.rob;
 
   return (
     <div className="space-y-5">
@@ -18,6 +20,11 @@ export function EconomyEditor({ value, onChange }: { value: EconomySettings; onC
         <StatRow>
           <span className="text-mist">Starting balance</span>
           <NumInput value={value.startingBalance} min={0} max={1_000_000_000} width="w-28" onChange={(startingBalance) => set({ startingBalance })} />
+        </StatRow>
+        <StatRow>
+          <span className="text-mist">Transfer tax on /pay</span>
+          <NumInput value={value.payTax} min={0} max={50} onChange={(payTax) => set({ payTax })} />
+          <span>% (0 = no fee)</span>
         </StatRow>
       </Card>
 
@@ -31,6 +38,13 @@ export function EconomyEditor({ value, onChange }: { value: EconomySettings; onC
             <span>per day</span>
           </div>
         </Row>
+        <Row label="Weekly reward" hint="A larger reward members claim once per week." checked={wy.enabled} onChange={(enabled) => set({ weekly: { ...wy, enabled } })}>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-mist-muted">
+            <span>Reward</span>
+            <NumInput value={wy.amount} min={0} max={1_000_000} width="w-28" onChange={(amount) => set({ weekly: { ...wy, amount } })} />
+            <span>per week</span>
+          </div>
+        </Row>
         <Row label="Work command" hint="Members earn a random amount on a cooldown." checked={wk.enabled} onChange={(enabled) => set({ work: { ...wk, enabled } })}>
           <div className="flex flex-wrap items-center gap-2 text-sm text-mist-muted">
             <span>Earn</span>
@@ -39,6 +53,15 @@ export function EconomyEditor({ value, onChange }: { value: EconomySettings; onC
             <NumInput value={wk.max} min={0} max={1_000_000} width="w-24" onChange={(max) => set({ work: { ...wk, max } })} />
             <span>every</span>
             <NumInput value={wk.cooldownSec} min={0} max={86_400} width="w-24" onChange={(cooldownSec) => set({ work: { ...wk, cooldownSec } })} />
+            <span>seconds</span>
+          </div>
+        </Row>
+        <Row label="Rob command" hint="Members can attempt to steal currency from others." checked={rb.enabled} onChange={(enabled) => set({ rob: { ...rb, enabled } })}>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-mist-muted">
+            <span>Success chance</span>
+            <NumInput value={rb.successPercent} min={0} max={100} onChange={(successPercent) => set({ rob: { ...rb, successPercent } })} />
+            <span>% · cooldown</span>
+            <NumInput value={rb.cooldownSec} min={0} max={604_800} width="w-28" onChange={(cooldownSec) => set({ rob: { ...rb, cooldownSec } })} />
             <span>seconds</span>
           </div>
         </Row>

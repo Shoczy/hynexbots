@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
 import { Logo, DiscordIcon } from '@/components/ui';
+import { withBase } from '@/lib/paths';
 
 export const dynamic = 'force-dynamic';
 
 export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
-  if (getSession()) redirect('/dashboard');
+  if (getSession()) redirect('/bots');
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -32,7 +33,7 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
             </p>
           )}
 
-          <a href="/api/auth/login" className="btn-primary mt-8 w-full py-3 text-base">
+          <a href={withBase('/api/auth/login')} className="btn-primary mt-8 w-full py-3 text-base">
             <DiscordIcon className="h-5 w-5" />
             Continue with Discord
           </a>
