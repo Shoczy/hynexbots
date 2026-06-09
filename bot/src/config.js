@@ -98,6 +98,18 @@ const config = {
     delivered: '<:check:1514039861802172598>',
     cancelled: '<:close:1514039827513999401>',
   },
+
+  /** The /payment info panel: header image, payable methods, and the order link. */
+  paymentPanel: {
+    // The "Order Now" button links here (channel where customers open a ticket).
+    ticketChannelId: '1483823084946329820',
+    // Each method: a heading + a copyable address. `emoji` and `note` are optional.
+    methods: [
+      { label: 'PayPal', emoji: '<:paypal:1514035998437412874>', address: 'muratwasabi@gmail.com', note: 'Friends & Family only — no notes.' },
+      { label: 'Litecoin (LTC)', emoji: '', address: 'ltc1qkpjmfmtw3ujq0nn8c5hmz3u2fnehjfv2ntlrse' },
+      { label: 'Bitcoin (BTC)', emoji: '<:btc1:1514034898069880855>', address: 'bc1qw8xjgzxpx27sjg4qspqnhds0jfyy8dnpjxn7yv' },
+    ],
+  },
 };
 
 module.exports = config;
