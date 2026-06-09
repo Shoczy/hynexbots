@@ -103,11 +103,11 @@ const config = {
   paymentPanel: {
     // The "Order Now" button links here (channel where customers open a ticket).
     ticketChannelId: '1483823084946329820',
-    // Each method: a heading + a copyable address. `emoji` and `note` are optional.
+    // Each method: a heading + optional copyable `address` + optional `note`.
     methods: [
-      { label: 'PayPal', emoji: '<:paypal:1514035998437412874>', address: 'muratwasabi@gmail.com', note: 'Friends & Family only — no notes.' },
-      { label: 'Litecoin (LTC)', emoji: '', address: 'ltc1qkpjmfmtw3ujq0nn8c5hmz3u2fnehjfv2ntlrse' },
-      { label: 'Bitcoin (BTC)', emoji: '<:btc1:1514034898069880855>', address: 'bc1qw8xjgzxpx27sjg4qspqnhds0jfyy8dnpjxn7yv' },
+      { label: 'Paysafecard', note: 'Send your 16-digit Paysafecard code in your ticket.' },
+      { label: 'PayPal', address: 'leongoertz999@icloud.com', note: 'Friends & Family only.' },
+      { label: 'Crypto (BTC / ETH / USDT)', address: '— added soon —', note: 'Wallet addresses coming soon.' },
     ],
   },
 };

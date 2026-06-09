@@ -23,8 +23,8 @@ function buildPaymentPanel(guildId) {
 
   for (const m of methods) {
     children.push(sep());
-    children.push(text(`### ${m.emoji ? `${m.emoji} ` : ''}${m.label}`));
-    children.push(text('```\n' + m.address + '\n```'));
+    children.push(text(`### ${m.label}`));
+    if (m.address) children.push(text('```\n' + m.address + '\n```'));
     if (m.note) children.push(text(`-# ${m.note}`));
   }
 
@@ -36,7 +36,6 @@ function buildPaymentPanel(guildId) {
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
           .setLabel('Order Now')
-          .setEmoji('🛒')
           .setURL(`https://discord.com/channels/${guildId}/${pp.ticketChannelId}`),
       ),
     );
