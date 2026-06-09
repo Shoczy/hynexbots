@@ -96,6 +96,11 @@ module.exports = {
       if (interaction.isButton() && interaction.customId === 'order_confirm_payment') {
         return tickets.confirmPayment(interaction);
       }
+      // Staff order-status dropdown (replaces the old per-status buttons).
+      if (interaction.isStringSelectMenu() && interaction.customId === 'order_status_select') {
+        return tickets.setOrderStatus(interaction, interaction.values[0]);
+      }
+      // Backward-compat: old purchase tickets still carry status buttons.
       if (interaction.isButton() && interaction.customId.startsWith('order_status:')) {
         const status = interaction.customId.slice('order_status:'.length);
         return tickets.setOrderStatus(interaction, status);

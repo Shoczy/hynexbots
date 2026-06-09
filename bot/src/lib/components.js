@@ -27,10 +27,14 @@ const sep = (large = false, divider = true) =>
     .setDivider(divider)
     .setSpacing(large ? SeparatorSpacingSize.Large : SeparatorSpacingSize.Small);
 
-/** Build a Container with an accent stripe. `children` are added in order. */
+/**
+ * Build a Container. `children` are added in order. The main bot uses a clean,
+ * neutral look — we intentionally do NOT set an accent colour (the `accent`
+ * argument is kept so call sites can stay expressive, but it's not applied).
+ */
 function container(accent, children = []) {
+  void accent;
   const c = new ContainerBuilder();
-  if (accent != null) c.setAccentColor(accent);
   for (const child of children) {
     const tag = child?.data?.type;
     // 10 = TextDisplay, 14 = Separator, 1 = ActionRow, 9 = Section, 13 = File, 12 = MediaGallery

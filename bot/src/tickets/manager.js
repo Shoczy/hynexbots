@@ -4,12 +4,14 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  StringSelectMenuBuilder,
   FileBuilder,
 } = require('discord.js');
 const config = require('../config');
 const store = require('../store');
 const orders = require('./orders');
 const { V2, text, media, sep, container } = require('../lib/components');
+const { parseEmoji } = require('../lib/emoji');
 
 // Minimum wait between a user opening tickets, to stop open/close spam.
 const TICKET_COOLDOWN_MS = 60_000;
@@ -22,13 +24,17 @@ function ticketControls() {
   );
 }
 
-/** Staff-only order pipeline controls, shown on purchase tickets. */
+/** Staff-only order pipeline control (a dropdown), shown on purchase tickets. */
 function orderControls() {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('order_status:paid').setLabel('Mark paid').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('order_status:delivered').setLabel('Mark delivered').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('order_status:cancelled').setLabel('Cancel order').setStyle(ButtonStyle.Secondary),
-  );
+  const menu = new StringSelectMenuBuilder()
+    .setCustomId('order_status_select')
+    .setPlaceholder('🛠️ Staff · update order status…')
+    .addOptions(
+      { label: 'Mark as paid', value: 'paid', emoji: parseEmoji(orders.STATUS_META.paid.emoji), description: 'Payment received — sends the delivery message' },
+      { label: 'Mark as delivered', value: 'delivered', emoji: parseEmoji(orders.STATUS_META.delivered.emoji), description: 'Bot handed over to the customer' },
+      { label: 'Cancel order', value: 'cancelled', emoji: parseEmoji(orders.STATUS_META.cancelled.emoji), description: 'Void this order' },
+    );
+  return new ActionRowBuilder().addComponents(menu);
 }
 
 /**
@@ -153,21 +159,20 @@ async function createTicket(interaction, opts) {
       paymentLabel: opts.paymentLabelText,
     });
 
-    children.push(text(`### ${opts.product.emoji} ${opts.product.label} · ${opts.product.price}`));
+    children.push(text(`## ${opts.product.emoji} ${opts.product.label}`));
 
-    // Order summary from the purchase modal.
-    const lines = [`**Order** · \`${order.id}\` · ${orders.STATUS_META.pending.emoji} Pending`];
-    if (opts.botName) lines.push(`**Bot name** · ${opts.botName}`);
-    if (opts.paymentLabelText) lines.push(`**Payment** · ${opts.paymentLabelText}`);
-    lines.push(`**Profile picture** · ${opts.avatarUrl ? 'attached below' : 'not provided'}`);
+    // Compact order summary from the purchase modal.
+    const lines = [`\`${order.id}\` · ${orders.STATUS_META.pending.emoji} **Pending** · ${opts.product.price}`];
+    if (opts.botName) lines.push(`**Bot name** ${opts.botName}`);
+    if (opts.paymentLabelText) lines.push(`**Payment** ${opts.paymentLabelText}`);
     children.push(text(lines.join('\n')));
 
     if (opts.avatarUrl) children.push(media(opts.avatarUrl));
 
+    children.push(sep());
     children.push(
       text(
-        `Thanks for your order, <@${user.id}>. A team member will be with you shortly to arrange ` +
-          `delivery, setup and payment.`,
+        `Thanks for your order, <@${user.id}> — a team member will be with you shortly to arrange delivery, setup & payment.`,
       ),
     );
   } else {
@@ -230,7 +235,8 @@ function deliveryView(order, actorId) {
     text(
       `### ✅ Payment received — delivery underway\n` +
         `Thanks <@${order.ownerId}>! Your payment is recorded. Our team will register your bot now, and ` +
-        `you'll get a DM with your dashboard link and backup key the moment it's ready.\n\n` +
+        `you'll get a DM with your dashboard link the moment it's ready — just log in with Discord, ` +
+        `your bot will already be there.\n\n` +
         `**Customize your bot here:** ${config.dashboardUrl}/dashboard`,
     ),
   ]);
