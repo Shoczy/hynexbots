@@ -93,10 +93,10 @@ const config = {
    * Drop in your own custom emojis here, e.g. '<:paid:1514...>'. Unicode also fine.
    */
   orderEmojis: {
-    pending: '🕓',
-    paid: '💰',
-    delivered: '✅',
-    cancelled: '✖️',
+    pending: '<:clocky:1514039695426846912>',
+    paid: '<:coin1:1514034824099139697>',
+    delivered: '<:check:1514039861802172598>',
+    cancelled: '<:close:1514039827513999401>',
   },
 };
 
