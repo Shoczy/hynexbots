@@ -7,13 +7,15 @@
  * the ticket; `/orders` summarises the pipeline.
  */
 const store = require('../store');
+const config = require('../config');
 
 const STATUSES = ['pending', 'paid', 'delivered', 'cancelled'];
+const E = config.orderEmojis || {};
 const STATUS_META = {
-  pending: { label: 'Pending', emoji: '🕓' },
-  paid: { label: 'Paid', emoji: '💰' },
-  delivered: { label: 'Delivered', emoji: '✅' },
-  cancelled: { label: 'Cancelled', emoji: '✖️' },
+  pending: { label: 'Pending', emoji: E.pending || '🕓' },
+  paid: { label: 'Paid', emoji: E.paid || '💰' },
+  delivered: { label: 'Delivered', emoji: E.delivered || '✅' },
+  cancelled: { label: 'Cancelled', emoji: E.cancelled || '✖️' },
 };
 
 function createOrder({ channelId, ownerId, product, botName, payment, paymentLabel }) {

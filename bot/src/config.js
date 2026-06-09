@@ -87,6 +87,17 @@ const config = {
     { value: 'paypal', label: 'PayPal', emoji: '<:paypal:1514035998437412874>' },
     { value: 'crypto', label: 'Crypto (BTC / ETH / USDT)', emoji: '<:btc1:1514034898069880855>' },
   ],
+
+  /**
+   * Emojis for the order-status pipeline (shown on purchase tickets + /orders).
+   * Drop in your own custom emojis here, e.g. '<:paid:1514...>'. Unicode also fine.
+   */
+  orderEmojis: {
+    pending: '🕓',
+    paid: '💰',
+    delivered: '✅',
+    cancelled: '✖️',
+  },
 };
 
 module.exports = config;
