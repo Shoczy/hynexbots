@@ -49,7 +49,9 @@ function processStatus(bot) {
 /** Pretty metadata for a bot type (falls back to a generic custom look). */
 function typeMeta(type) {
   const p = config.catalog.find((c) => c.id === type);
-  if (p) return { type: p.id, label: p.label, emoji: p.emoji };
+  // The dashboard is a web app — it can't render Discord custom emojis
+  // (<:name:id>), so always hand it a plain Unicode `webEmoji`.
+  if (p) return { type: p.id, label: p.label, emoji: p.webEmoji || '🤖' };
   return { type: type || 'custom', label: type === 'custom' ? 'Custom Bot' : type, emoji: '🛠️' };
 }
 

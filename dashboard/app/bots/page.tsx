@@ -77,23 +77,28 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.06 }}
-              className="card group flex items-center gap-4 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-ink-600"
+              className="group relative overflow-hidden rounded-2xl border border-ink-700 bg-ink-900/50 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10"
             >
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-ink-700 bg-ink-800 text-2xl">
-                {b.emoji}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate font-display text-lg font-semibold">{b.name}</h3>
-                  {b.isOwner && (
-                    <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-glow">
-                      Owner
-                    </span>
-                  )}
+              {/* soft accent glow on hover */}
+              <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/15 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+              <div className="relative flex items-center gap-4">
+                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-ink-600 bg-gradient-to-br from-accent/25 to-ink-800 text-3xl shadow-inner">
+                  {b.emoji}
                 </div>
-                <p className="truncate text-sm text-mist-muted">{b.label}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="truncate font-display text-lg font-semibold">{b.name}</h3>
+                    {b.isOwner && (
+                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-glow">
+                        Owner
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-sm text-mist-muted">{b.label}</p>
+                  <p className="mt-0.5 truncate font-mono text-[11px] text-mist-faint">{b.appId}</p>
+                </div>
+                <span className="text-mist-faint transition-all duration-300 group-hover:translate-x-1 group-hover:text-accent">→</span>
               </div>
-              <span className="text-mist-faint transition-transform duration-300 group-hover:translate-x-1">→</span>
             </motion.a>
           ))}
 

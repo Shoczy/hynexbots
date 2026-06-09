@@ -50,11 +50,15 @@ const config = {
    * The ready-made catalog shown in the buy panel.
    * Prices are display-only; payment is handled manually inside the ticket.
    */
+  // `emoji` = the custom Discord emoji (rendered in the bot's Discord panels).
+  // `webEmoji` = a plain Unicode fallback used by the web dashboard (which can't
+  // render <:name:id> custom emojis — it would show the raw text).
   catalog: [
     {
       id: 'moderation',
       label: 'Moderation',
       emoji: '<:shield1:1514034751273566329>',
+      webEmoji: '🛡️',
       price: '$49',
       description: 'Auto-mod, verification, welcome & anti-raid',
     },
@@ -62,6 +66,7 @@ const config = {
       id: 'tickets',
       label: 'Tickets',
       emoji: '<:ticket1:1514034787428597872>',
+      webEmoji: '🎟️',
       price: '$39',
       description: 'Tickets, applications, FAQ & welcome',
     },
@@ -69,6 +74,7 @@ const config = {
       id: 'economy',
       label: 'Economy',
       emoji: '<:coin1:1514034824099139697>',
+      webEmoji: '🪙',
       price: '$59',
       description: 'Economy, leveling, giveaways & welcome',
     },
@@ -76,6 +82,7 @@ const config = {
       id: 'music',
       label: 'Music',
       emoji: '<:music1:1514034861969641512>',
+      webEmoji: '🎧',
       price: '$45',
       description: 'HQ audio, playlists, voice leveling & 24/7',
     },
