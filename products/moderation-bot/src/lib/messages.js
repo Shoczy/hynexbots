@@ -1,7 +1,6 @@
 'use strict';
 
-const { EmbedBuilder } = require('discord.js');
-const { brandColor } = require('./embeds');
+const { brandColor, v2 } = require('./embeds');
 
 /**
  * Substitute the dashboard's message variables with live member/guild data.
@@ -24,25 +23,26 @@ function hexToInt(hex) {
 }
 
 /**
- * Build a sendable { content, embeds } payload from a welcome/leave message block,
- * with variables resolved. Returns null when the block is disabled or empty.
+ * Build a sendable Components V2 payload from a welcome/leave message block,
+ * with variables resolved. The plain text and the embed body live in one accent
+ * container (separated by a divider). Returns null when disabled or empty.
  */
 function buildMessagePayload(block, member) {
   if (!block || !block.enabled) return null;
-  const content = block.text ? applyVars(block.text, member) : '';
-
-  let embed = null;
+  const text = block.text ? applyVars(block.text, member) : '';
   const e = block.embed;
+  const items = [];
+  if (text) items.push(text);
   if (e?.enabled) {
-    embed = new EmbedBuilder().setColor(hexToInt(e.color));
-    if (e.title) embed.setTitle(applyVars(e.title, member));
-    if (e.description) embed.setDescription(applyVars(e.description, member));
-    if (e.image) embed.setImage(e.image);
-    if (e.footer) embed.setFooter({ text: applyVars(e.footer, member) });
+    const hasEmbedBody = e.title || e.description || e.image || e.footer;
+    if (text && hasEmbedBody) items.push({ separator: true });
+    if (e.title) items.push(`## ${applyVars(e.title, member)}`);
+    if (e.description) items.push(applyVars(e.description, member));
+    if (e.image) items.push({ image: e.image });
+    if (e.footer) items.push(`-# ${applyVars(e.footer, member)}`);
   }
-
-  if (!content && !embed) return null;
-  return { content: content || undefined, embeds: embed ? [embed] : [] };
+  if (!items.length) return null;
+  return v2(items, e?.enabled ? hexToInt(e.color) : brandColor());
 }
 
 module.exports = { applyVars, buildMessagePayload };

@@ -1,7 +1,7 @@
 'use strict';
 
 const { fivem } = require('../lib/state');
-const { make, COLORS } = require('../lib/embeds');
+const { v2, COLORS } = require('../lib/embeds');
 
 /**
  * Scheduled restart announcements. Every minute we compare the current server
@@ -23,14 +23,13 @@ function minus(time, mins) {
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
 }
 
-async function announce(text, color, ping) {
+async function announce(text, color) {
   const rs = fivem().restarts;
   if (!rs.channelId) return;
   const channel = await client.channels.fetch(rs.channelId).catch(() => null);
   if (!channel || !channel.isTextBased?.()) return;
   const name = fivem().server.name || 'The server';
-  const embed = make({ title: '🔄 Server restart', description: text.replace('{server}', name), color });
-  await channel.send({ content: ping ? `<@&${ping}>` : undefined, embeds: [embed] }).catch(() => {});
+  await channel.send(v2(['## 🔄 Server restart', text.replace('{server}', name)], color)).catch(() => {});
 }
 
 async function tick() {

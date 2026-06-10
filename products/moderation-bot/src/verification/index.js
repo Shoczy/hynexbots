@@ -1,21 +1,15 @@
 'use strict';
 
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { cfg } = require('../lib/state');
-const { brandColor, ok, err } = require('../lib/embeds');
+const { brandColor, ok, err, v2 } = require('../lib/embeds');
 
 // Stable custom id so a panel posted long ago keeps working across restarts.
 const VERIFY_BUTTON_ID = 'hynex:verify';
 
-/** The verification panel message (embed + button), built from live config. */
+/** The verification panel message (Components V2 container + button), from live config. */
 function panelPayload() {
   const v = cfg('verification', {});
-  const embed = new EmbedBuilder()
-    .setColor(brandColor())
-    .setTitle(v.title || 'Verify to continue')
-    .setDescription(v.description || 'Click the button below to unlock the server.')
-    .setFooter({ text: 'Hynex Bots' });
-
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(VERIFY_BUTTON_ID)
@@ -23,7 +17,16 @@ function panelPayload() {
       .setStyle(ButtonStyle.Success)
       .setEmoji('✅'),
   );
-  return { embeds: [embed], components: [row] };
+  return v2(
+    [
+      `## ${v.title || 'Verify to continue'}`,
+      v.description || 'Click the button below to unlock the server.',
+      { separator: true },
+      { row },
+      '-# Hynex Bots',
+    ],
+    brandColor(),
+  );
 }
 
 /** Handle a click on the Verify button: grant the configured role. */

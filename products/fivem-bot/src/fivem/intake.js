@@ -3,7 +3,7 @@
 const http = require('http');
 const config = require('../config');
 const { fivem } = require('../lib/state');
-const { make, COLORS } = require('../lib/embeds');
+const { v2, COLORS } = require('../lib/embeds');
 const store = require('../lib/store');
 
 /**
@@ -52,16 +52,13 @@ async function postReport({ player, reason, id }) {
   if (!rp.enabled || !rp.channelId) return false;
   const channel = await client.channels.fetch(rp.channelId).catch(() => null);
   if (!channel || !channel.isTextBased?.()) return false;
-  const embed = make({
-    title: '🚨 In-game report',
-    color: COLORS.warning,
-    fields: [
-      { name: 'Player', value: String(player || 'Unknown').slice(0, 256), inline: true },
-      ...(id ? [{ name: 'Identifier', value: String(id).slice(0, 256), inline: true }] : []),
-      { name: 'Reason', value: String(reason || 'No reason given').slice(0, 1024) },
-    ],
-  });
-  await channel.send({ content: rp.pingRoleId ? `<@&${rp.pingRoleId}>` : undefined, embeds: [embed] }).catch(() => {});
+  const items = [];
+  if (rp.pingRoleId) items.push(`<@&${rp.pingRoleId}>`);
+  items.push('## 🚨 In-game report');
+  items.push(`**Player:** ${String(player || 'Unknown').slice(0, 256)}`);
+  if (id) items.push(`**Identifier:** ${String(id).slice(0, 256)}`);
+  items.push(`**Reason:** ${String(reason || 'No reason given').slice(0, 1024)}`);
+  await channel.send(v2(items, COLORS.warning)).catch(() => {});
   return true;
 }
 

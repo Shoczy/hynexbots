@@ -1,6 +1,14 @@
 'use strict';
 
-const { EmbedBuilder } = require('discord.js');
+const {
+  EmbedBuilder,
+  ContainerBuilder,
+  TextDisplayBuilder,
+  SeparatorBuilder,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
+  MessageFlags,
+} = require('discord.js');
 const { cfg } = require('./state');
 
 /**
@@ -68,4 +76,37 @@ function warn(description, title) {
   return make({ title, description, color: COLORS.warning });
 }
 
-module.exports = { brandColor, base, make, info, ok, err, warn, COLORS };
+/**
+ * Build a Components V2 message payload — a single accent "container" holding an
+ * ordered list of items. Used for everything posted to a channel (panels,
+ * welcome messages, status board) so the bot's output uses Discord's modern
+ * component system instead of legacy embeds.
+ *
+ * `items` entries:
+ *   - string            → a text display (markdown; `##` heading, `-#` subtext)
+ *   - { separator:true} → a divider
+ *   - { image: url }    → a media gallery image
+ *   - { row }           → an ActionRow (buttons)
+ */
+function v2(items = [], accent) {
+  const container = new ContainerBuilder();
+  const color = accent ?? brandColor();
+  if (Number.isFinite(color)) container.setAccentColor(color);
+  for (const it of items) {
+    if (it == null || it === '') continue;
+    if (typeof it === 'string') {
+      container.addTextDisplayComponents(new TextDisplayBuilder().setContent(it.slice(0, 4000)));
+    } else if (it.separator) {
+      container.addSeparatorComponents(new SeparatorBuilder());
+    } else if (it.image) {
+      container.addMediaGalleryComponents(
+        new MediaGalleryBuilder().addItems(new MediaGalleryItemBuilder().setURL(it.image)),
+      );
+    } else if (it.row) {
+      container.addActionRowComponents(it.row);
+    }
+  }
+  return { flags: MessageFlags.IsComponentsV2, components: [container] };
+}
+
+module.exports = { brandColor, base, make, info, ok, err, warn, v2, COLORS };

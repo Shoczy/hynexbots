@@ -1,14 +1,15 @@
 'use strict';
 
+const { MessageFlags } = require('discord.js');
 const { fivem, cfg } = require('../lib/state');
 const { queryServer } = require('../lib/fivem');
-const { statusEmbed } = require('../lib/render');
+const { statusV2 } = require('../lib/render');
 
 /**
- * Live "server status" board: a single embed in the configured channel, edited
- * in place on a timer so the player count stays current without spamming. The
- * message id is remembered in memory; on (re)start we adopt the last status
- * message the bot posted in that channel, otherwise we post a fresh one.
+ * Live "server status" board: a single Components V2 container in the configured
+ * channel, edited in place on a timer so the player count stays current without
+ * spamming. The message id is remembered in memory; on (re)start we adopt the
+ * last status message the bot posted in that channel, otherwise we post fresh.
  */
 let client = null;
 let timer = null;
@@ -21,24 +22,24 @@ async function tick() {
   if (!channel || !channel.isTextBased?.()) return;
 
   const snapshot = await queryServer(fivem().server.host);
-  const embed = statusEmbed(snapshot, fivem().server.name);
+  const payload = statusV2(snapshot, fivem().server.name);
 
   let msgId = lastMessage.get(s.channelId);
   if (!msgId) {
     // Adopt the most recent status message we posted, to avoid duplicates on restart.
     const recent = await channel.messages.fetch({ limit: 25 }).catch(() => null);
-    const mine = recent?.find((m) => m.author.id === client.user.id && m.embeds[0]?.title?.includes('erver'));
+    const mine = recent?.find((m) => m.author.id === client.user.id && m.flags?.has?.(MessageFlags.IsComponentsV2));
     if (mine) msgId = mine.id;
   }
 
   if (msgId) {
-    const edited = await channel.messages.edit(msgId, { embeds: [embed] }).catch(() => null);
+    const edited = await channel.messages.edit(msgId, payload).catch(() => null);
     if (edited) {
       lastMessage.set(s.channelId, edited.id);
       return;
     }
   }
-  const sent = await channel.send({ embeds: [embed] }).catch(() => null);
+  const sent = await channel.send(payload).catch(() => null);
   if (sent) lastMessage.set(s.channelId, sent.id);
 }
 

@@ -1,8 +1,9 @@
 'use client';
 
-// A reusable Discord-style preview of an embed message (+ optional buttons).
-// Used by every editor where a customer designs an embed/panel so they can see
-// exactly how it will look in Discord.
+// A Discord-style preview of a Components V2 message: one accent "container"
+// that holds the text, an optional divider, and any buttons — all inside the
+// accent box (unlike legacy embeds, where buttons sat outside). Used by every
+// editor where a customer designs a panel so they see how it'll look in Discord.
 
 type PreviewButton = { label: string; emoji?: string; style?: 'primary' | 'success' | 'danger' | 'secondary' };
 
@@ -45,9 +46,9 @@ export function EmbedPreview({
   buttons?: PreviewButton[];
   emptyHint?: string;
 }) {
-  const showEmbed = Boolean(title || description || image || footer);
   const hasContent = Boolean(content && content.trim());
   const hasButtons = Boolean(buttons && buttons.length);
+  const showContainer = Boolean(title || description || image || footer || hasButtons);
 
   return (
     <div className="rounded-xl border border-ink-700 bg-[#313338] p-4 text-sm">
@@ -62,36 +63,33 @@ export function EmbedPreview({
 
           {hasContent && <p className="mt-1 whitespace-pre-wrap break-words text-[#dbdee1]">{fill(content!)}</p>}
 
-          {showEmbed && (
-            <div className="mt-2 max-w-md overflow-hidden rounded border-l-4 bg-[#2b2d31]" style={{ borderColor: accent || '#6366f1' }}>
-              <div className="p-3">
-                {title && <p className="font-semibold text-white">{fill(title)}</p>}
-                {description && <p className="mt-1 whitespace-pre-wrap break-words text-[#dbdee1]">{fill(description)}</p>}
-                {image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={image} alt="" className="mt-2 max-h-40 rounded object-cover" onError={(ev) => ((ev.target as HTMLImageElement).style.display = 'none')} />
-                )}
-                {footer && <p className="mt-2 text-xs text-[#949ba4]">{fill(footer)}</p>}
-              </div>
+          {showContainer && (
+            <div className="mt-2 max-w-md space-y-2 overflow-hidden rounded-lg border-l-4 bg-[#2b2d31] p-3" style={{ borderColor: accent || '#6366f1' }}>
+              {title && <p className="text-[15px] font-semibold text-white">{fill(title)}</p>}
+              {description && <p className="whitespace-pre-wrap break-words text-[#dbdee1]">{fill(description)}</p>}
+              {image && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={image} alt="" className="max-h-40 rounded object-cover" onError={(ev) => ((ev.target as HTMLImageElement).style.display = 'none')} />
+              )}
+              {hasButtons && (
+                <div className="flex flex-wrap gap-2 border-t border-white/10 pt-2">
+                  {buttons!.map((b, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-white"
+                      style={{ backgroundColor: BTN_BG[b.style || 'secondary'] }}
+                    >
+                      {b.emoji && <span>{b.emoji}</span>}
+                      {b.label || 'Button'}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {footer && <p className="text-xs text-[#949ba4]">{fill(footer)}</p>}
             </div>
           )}
 
-          {hasButtons && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {buttons!.map((b, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium text-white"
-                  style={{ backgroundColor: BTN_BG[b.style || 'secondary'] }}
-                >
-                  {b.emoji && <span>{b.emoji}</span>}
-                  {b.label || 'Button'}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {!showEmbed && !hasContent && !hasButtons && <p className="mt-1 italic text-[#6d7178]">{emptyHint}</p>}
+          {!showContainer && !hasContent && <p className="mt-1 italic text-[#6d7178]">{emptyHint}</p>}
         </div>
       </div>
     </div>

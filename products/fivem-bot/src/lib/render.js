@@ -1,6 +1,6 @@
 'use strict';
 
-const { make, COLORS } = require('./embeds');
+const { make, v2, COLORS } = require('./embeds');
 
 /** A simple 10-segment fill bar for the player count. */
 function playerBar(players, max) {
@@ -47,4 +47,24 @@ function playersEmbed(snapshot, displayName) {
   return make({ title: `👥 Players online — ${snapshot.players}${max}`, description: (body + extra).slice(0, 4000) });
 }
 
-module.exports = { statusEmbed, playersEmbed, playerBar };
+/** The live status board as a Components V2 container (posted/edited in a channel). */
+function statusV2(snapshot, displayName) {
+  const name = displayName || snapshot.hostname || 'FiveM Server';
+  if (!snapshot.configured) {
+    return v2(['## 🎮 Server status', 'No server address configured yet — set it in your Hynex dashboard.'], COLORS.warning);
+  }
+  if (!snapshot.online) {
+    return v2([`## 🔴 ${name}`, 'The server is **offline** or unreachable.'], COLORS.danger);
+  }
+  const max = snapshot.maxPlayers ? `/${snapshot.maxPlayers}` : '';
+  const bar = playerBar(snapshot.players, snapshot.maxPlayers);
+  const items = [`## 🟢 ${name}`, 'The server is **online**.', { separator: true }, `**Players:** ${snapshot.players}${max}\n${bar}`];
+  const meta = [];
+  if (snapshot.gametype) meta.push(`**Game type:** ${snapshot.gametype}`);
+  if (snapshot.mapname) meta.push(`**Map:** ${snapshot.mapname}`);
+  if (meta.length) items.push(meta.join(' · '));
+  items.push('-# Hynex Bots · updates automatically');
+  return v2(items, COLORS.success);
+}
+
+module.exports = { statusEmbed, playersEmbed, statusV2, playerBar };

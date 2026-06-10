@@ -2,7 +2,8 @@
 
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { fivem } = require('../lib/state');
-const { make, err, ok, COLORS } = require('../lib/embeds');
+const { err, ok } = require('../lib/embeds');
+const restartScheduler = require('../fivem/restartScheduler');
 
 module.exports = {
   name: 'restart',
@@ -21,19 +22,7 @@ module.exports = {
     if (!channelId) {
       return interaction.reply({ embeds: [err('No announcement channel is set. Pick one in your dashboard → FiveM → Restart announcements.')], ephemeral: true });
     }
-    const channel = await interaction.client.channels.fetch(channelId).catch(() => null);
-    if (!channel || !channel.isTextBased?.()) {
-      return interaction.reply({ embeds: [err('The configured announcement channel is unavailable.')], ephemeral: true });
-    }
-
-    const name = fivem().server.name || 'The server';
-    const minutes = interaction.options.getInteger('minutes');
-    const text = minutes
-      ? `**${name}** restarts in **${minutes} minute${minutes === 1 ? '' : 's'}**.`
-      : `**${name}** is restarting now. You may briefly lose connection.`;
-    const embed = make({ title: '🔄 Server restart', description: text, color: minutes ? COLORS.warning : COLORS.danger });
-
-    await channel.send({ content: rs.pingRoleId ? `<@&${rs.pingRoleId}>` : undefined, embeds: [embed] }).catch(() => {});
+    await restartScheduler.manualAnnounce(interaction.options.getInteger('minutes') || 0);
     return interaction.reply({ embeds: [ok('Restart announcement posted.')], ephemeral: true });
   },
 };

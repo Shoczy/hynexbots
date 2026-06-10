@@ -7,6 +7,7 @@ const { info, err, ok } = require('../lib/embeds');
 const { queryServer } = require('../lib/fivem');
 const { statusEmbed, playersEmbed } = require('../lib/render');
 const whitelist = require('../lib/whitelist');
+const restartScheduler = require('../fivem/restartScheduler');
 
 // Native permission each privileged prefix command requires (mirrors the slash twins).
 const REQUIRED_PERM = {
@@ -66,16 +67,9 @@ async function handlePrefix(message) {
       return send(message, result.embed), true;
     }
     case 'restart': {
-      const rs = fivem().restarts;
-      if (!rs.channelId) return send(message, err('No announcement channel is set — configure it in your dashboard.')), true;
-      const channel = await message.client.channels.fetch(rs.channelId).catch(() => null);
-      if (!channel?.isTextBased?.()) return send(message, err('The configured announcement channel is unavailable.')), true;
+      if (!fivem().restarts.channelId) return send(message, err('No announcement channel is set — configure it in your dashboard.')), true;
       const mins = parseInt(args[0], 10);
-      const name2 = fivem().server.name || 'The server';
-      const text = Number.isFinite(mins) && mins > 0
-        ? `**${name2}** restarts in **${mins} minute${mins === 1 ? '' : 's'}**.`
-        : `**${name2}** is restarting now. You may briefly lose connection.`;
-      await channel.send({ embeds: [info('🔄 Server restart', text)] }).catch(() => {});
+      await restartScheduler.manualAnnounce(Number.isFinite(mins) && mins > 0 ? mins : 0);
       return send(message, ok('Restart announcement posted.')), true;
     }
     case 'help': {
