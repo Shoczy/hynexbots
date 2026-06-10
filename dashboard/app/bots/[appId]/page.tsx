@@ -48,18 +48,36 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'commands', label: 'Commands' },
 ];
 
-// Sidebar grouping for the editor nav — keeps the (now many) tabs tidy and
-// guides customers: general setup, the modules they bought, read-only insights,
-// and account management. Only groups with at least one in-scope tab render.
+// Sidebar grouping for the editor nav — keeps the tabs tidy and guides
+// customers: general setup, the module config tabs, read-only insights, and
+// account management. Only groups with at least one visible tab render.
 const TAB_GROUPS: { label: string; tabs: Tab[] }[] = [
   { label: 'Setup', tabs: ['basics', 'modules', 'messages', 'commands'] },
   {
     label: 'Modules',
-    tabs: ['moderation', 'verification', 'reactionroles', 'antinuke', 'fivem', 'leveling'],
+    tabs: ['moderation', 'antinuke', 'verification', 'fivem', 'reactionroles', 'leveling'],
   },
   { label: 'Insights', tabs: ['analytics', 'logs'] },
   { label: 'Manage', tabs: ['team', 'license'] },
 ];
+
+// A dedicated module-settings tab only appears once its module is enabled in the
+// Modules tab. Tabs not listed here (basics, modules, messages, commands, …) are
+// always shown (within the product's scope). Welcome lives in the Messages tab.
+const TAB_MODULE: Partial<Record<Tab, string>> = {
+  moderation: 'moderation',
+  verification: 'verification',
+  reactionroles: 'reactionroles',
+  antinuke: 'antinuke',
+  leveling: 'leveling',
+  fivem: 'fivem',
+};
+
+/** Is this tab visible given the live module toggles? Non-module tabs: always. */
+function tabUnlocked(tabId: Tab, modules: Record<string, boolean> | undefined): boolean {
+  const mod = TAB_MODULE[tabId];
+  return !mod || Boolean(modules?.[mod]);
+}
 
 export default function EditorPage() {
   const params = useParams<{ appId: string }>();
@@ -98,15 +116,15 @@ export default function EditorPage() {
   // Keep the active tab valid for this user's access (a member may not be able
   // to see the default 'basics' tab).
   useEffect(() => {
-    if (!bot) return;
+    if (!bot || !settings) return;
     const f = effectiveFeatures(bot.type, bot.features);
     const owner = Boolean(bot.isOwner);
     const p = bot.permissions ?? [];
-    const prod = TABS.filter((t) => f.tabs.includes(t.id)).map((t) => t.id as Tab);
+    const prod = TABS.filter((t) => f.tabs.includes(t.id) && tabUnlocked(t.id, settings.modules)).map((t) => t.id as Tab);
     const editable = owner ? prod : prod.filter((id) => p.includes(id));
     const ids: Tab[] = [...editable, 'analytics', 'logs', ...(owner ? (['team', 'license'] as Tab[]) : [])];
     setTab((cur) => (ids.includes(cur) ? cur : ids[0]));
-  }, [bot]);
+  }, [bot, settings]);
 
   const markDirty = () => {
     setDirty(true);
@@ -206,7 +224,8 @@ export default function EditorPage() {
   // Config tabs are scoped to the product, then further to what this member may
   // edit (the owner sees everything). Logs are read-only and always available;
   // the Team tab is owner-only.
-  const productTabs = TABS.filter((t) => features.tabs.includes(t.id));
+  // In scope for this product AND (for dedicated module tabs) the module is on.
+  const productTabs = TABS.filter((t) => features.tabs.includes(t.id) && tabUnlocked(t.id, settings.modules));
   const editableTabs = isOwner ? productTabs : productTabs.filter((t) => perms.includes(t.id));
   const visibleTabs = [
     ...editableTabs,
@@ -346,7 +365,7 @@ export default function EditorPage() {
           {tab === 'modules' && (
             <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card p-6">
               <h2 className="font-display text-xl font-semibold">Modules</h2>
-              <p className="mt-1 text-sm text-mist-muted">Turn features on or off. Changes apply to your live bot.</p>
+              <p className="mt-1 text-sm text-mist-muted">Turn features on or off. Enabling one reveals its settings tab in the sidebar.</p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {visibleModules.map((m) => (
                   <Toggle key={m.key} label={m.label} hint={m.hint} checked={Boolean(settings.modules[m.key])} onChange={(v) => toggleModule(m.key, v)} />
