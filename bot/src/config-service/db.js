@@ -153,6 +153,23 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_bot_incidents ON bot_incidents(app_id, started_at);
 `);
 
+// Dashboard → bot command queue. Lets a customer trigger an action from the
+// dashboard (e.g. "post the verify panel") without going back to Discord to run
+// a slash command. The dashboard enqueues; the running bot polls + executes.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bot_commands (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    app_id       TEXT NOT NULL,
+    action       TEXT NOT NULL,
+    payload      TEXT,                          -- JSON args, or null
+    status       TEXT NOT NULL DEFAULT 'pending', -- pending | delivered
+    created_at   INTEGER NOT NULL,
+    delivered_at INTEGER,
+    FOREIGN KEY (app_id) REFERENCES bots(app_id) ON DELETE CASCADE
+  );
+  CREATE INDEX IF NOT EXISTS idx_cmd_app ON bot_commands(app_id, status);
+`);
+
 // ── Default settings schema ───────────────────────────
 function defaultSettings() {
   return {
@@ -605,6 +622,46 @@ function deleteProcess(appId) {
   db.prepare('DELETE FROM bot_process WHERE app_id = ?').run(String(appId));
 }
 
+// ── Dashboard → bot command queue ─────────────────────
+/** Enqueue a command for a bot to pick up on its next poll. */
+function enqueueCommand(appId, action, payload = null) {
+  db.prepare('INSERT INTO bot_commands (app_id, action, payload, status, created_at) VALUES (?, ?, ?, ?, ?)').run(
+    String(appId),
+    String(action),
+    payload ? JSON.stringify(payload) : null,
+    'pending',
+    Date.now(),
+  );
+}
+
+/**
+ * Return this bot's pending commands and mark them delivered (at-least-once →
+ * we mark on read so a command isn't executed twice). Also prunes commands
+ * delivered more than a day ago so the table stays small.
+ */
+function takePendingCommands(appId, limit = 10) {
+  const rows = db
+    .prepare("SELECT id, action, payload FROM bot_commands WHERE app_id = ? AND status = 'pending' ORDER BY id ASC LIMIT ?")
+    .all(String(appId), Math.min(Math.max(1, limit | 0), 50));
+  if (rows.length) {
+    const ph = rows.map(() => '?').join(',');
+    db.prepare(`UPDATE bot_commands SET status = 'delivered', delivered_at = ? WHERE id IN (${ph})`).run(
+      Date.now(),
+      ...rows.map((r) => r.id),
+    );
+  }
+  db.prepare("DELETE FROM bot_commands WHERE status = 'delivered' AND delivered_at < ?").run(Date.now() - 864e5);
+  return rows.map((r) => ({ id: r.id, action: r.action, payload: r.payload ? safeParse(r.payload) : null }));
+}
+
+function safeParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
 // ── Audit log ─────────────────────────────────────────
 function addAudit({ appId, actorId, action, detail = '' }) {
   db.prepare('INSERT INTO audit_log (app_id, actor_id, action, detail, at) VALUES (?, ?, ?, ?, ?)').run(
@@ -785,6 +842,8 @@ module.exports = {
   listMembers,
   getConfig,
   setConfig,
+  enqueueCommand,
+  takePendingCommands,
   addAudit,
   listAudit,
   recordUsage,

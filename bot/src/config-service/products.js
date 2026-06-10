@@ -48,13 +48,13 @@ const ALL_GROUPS = COMMAND_GROUPS.map((g) => g.id);
 // because there's nothing else to toggle — the bot IS that one system.
 // Multi-system bots are sold as `custom`, which unlocks everything.
 const TEMPLATES = {
-  // The Security bot is a full "server guardian": moderation + a verification gate
-  // + anti-nuke + self-roles + welcome/auto-roles (edited in the Messages tab) +
-  // leveling. Multi-module, so it gets the Modules tab to toggle extras on and off.
+  // The Security bot is a focused "server guardian": moderation/auto-mod + a
+  // verification gate + anti-nuke + welcome/auto-roles (edited in the Messages
+  // tab). Only security-relevant modules — no reaction roles or leveling.
   moderation: {
-    tabs: ['basics', 'modules', 'moderation', 'verification', 'reactionroles', 'antinuke', 'messages', 'leveling', 'commands'],
-    modules: ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling'],
-    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'utility'],
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'messages', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke', 'welcome'],
+    commandGroups: ['moderation', 'verification', 'utility'],
   },
   // The FiveM bot: live server status, role whitelist, in-game reports and
   // scheduled restart announcements, plus welcome onboarding.

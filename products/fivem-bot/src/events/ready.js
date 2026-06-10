@@ -4,9 +4,28 @@ const { Events } = require('discord.js');
 const config = require('../config');
 const { ConfigClient } = require('../lib/configClient');
 const { setSettings, cfg } = require('../lib/state');
+const { buildMessagePayload } = require('../lib/messages');
 const statusBoard = require('../fivem/statusBoard');
 const restartScheduler = require('../fivem/restartScheduler');
 const intake = require('../fivem/intake');
+
+/** Run a dashboard-dispatched action (see config-service DISPATCH_ACTIONS). */
+async function runDashboardCommand(client, action, payload) {
+  if (action === 'fivem_post_status') {
+    await statusBoard.tick();
+  } else if (action === 'fivem_announce_restart') {
+    if (!cfg('fivem.restarts.channelId', '')) return;
+    await restartScheduler.manualAnnounce(Math.max(0, Number(payload?.minutes) || 0));
+  } else if (action === 'welcome_test') {
+    if (!cfg('modules.welcome', false)) return;
+    const block = cfg('messages.welcome', null);
+    const ch = block?.channelId ? await client.channels.fetch(block.channelId).catch(() => null) : null;
+    if (!ch?.isTextBased?.()) return;
+    const member = { id: client.user.id, user: client.user, displayName: client.user.username, guild: ch.guild };
+    const out = buildMessagePayload(block, member);
+    if (out) await ch.send(out).catch(() => {});
+  }
+}
 
 /** Debounced per-guild resync so a burst of role/channel edits = one sync. */
 function makeSyncer(client) {
@@ -59,6 +78,10 @@ module.exports = {
     statusBoard.start(client);
     restartScheduler.start(client);
     intake.start(client);
+
+    // Execute actions the customer triggers from the dashboard (post status,
+    // announce a restart, …) without needing to run a slash command.
+    configClient.startCommands((action, payload) => runDashboardCommand(client, action, payload));
 
     let nickTimer = null;
     let lastRefreshSec = cfg('fivem.status.refreshSec', 60);

@@ -10,6 +10,29 @@ const { inviteUrl } = require('./invite');
 const launcher = require('../launcher/manager');
 const orders = require('../tickets/orders');
 
+/**
+ * Actions the dashboard can dispatch to a running bot (so a customer can post a
+ * panel without going back to Discord). Each maps to the module it needs (so it
+ * can't be triggered on a bot whose product doesn't include it) and the edit
+ * permission required (owner always allowed).
+ */
+const DISPATCH_ACTIONS = {
+  post_verify_panel: { module: 'verification', tab: 'verification' },
+  welcome_test: { module: 'welcome', tab: 'messages' },
+  fivem_post_status: { module: 'fivem', tab: 'fivem' },
+  fivem_announce_restart: { module: 'fivem', tab: 'fivem' },
+};
+
+/** Clamp/whitelist a dispatch payload to just what each action accepts. */
+function sanitizeActionPayload(action, payload) {
+  const p = payload && typeof payload === 'object' ? payload : {};
+  if (action === 'fivem_announce_restart') {
+    const n = Math.round(Number(p.minutes));
+    return { minutes: Number.isFinite(n) ? Math.min(120, Math.max(0, n)) : 0 };
+  }
+  return {};
+}
+
 /** Top-level config sections that differ between two settings objects. */
 function changedSections(before, after) {
   const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
@@ -168,6 +191,33 @@ function mountConfigRoutes(app) {
       store.addAudit({ appId: bot.app_id, actorId: String(userId), action: 'config.save', detail: `updated: ${changed.join(', ')}` });
     }
     res.json({ ok: true, settings: saved });
+  });
+
+  // ── Dispatch an action to the running bot (dashboard) ──
+  // Lets a customer post a panel / trigger an action from the dashboard instead
+  // of running the matching slash command in Discord.
+  app.post('/api/bots/:appId/command', writeLimit, dashboardAuth, (req, res) => {
+    const { userId, action, payload } = req.body || {};
+    const access = store.memberAccess(String(userId || ''), req.params.appId);
+    if (!access) return res.status(403).json({ ok: false, error: 'no_access' });
+
+    const spec = DISPATCH_ACTIONS[action];
+    if (!spec) return res.status(400).json({ ok: false, error: 'unknown_action' });
+
+    const features = resolveFeatures(access.bot);
+    if (!features.modules.includes(spec.module)) {
+      return res.status(400).json({ ok: false, error: 'not_in_scope' });
+    }
+    if (!access.isOwner && !access.permissions.includes(spec.tab)) {
+      return res.status(403).json({ ok: false, error: 'forbidden' });
+    }
+    if (!launcher.isRunning(access.bot.app_id) && !store.getProcess(access.bot.app_id)) {
+      return res.status(400).json({ ok: false, error: 'not_hosted' });
+    }
+
+    store.enqueueCommand(access.bot.app_id, action, sanitizeActionPayload(action, payload));
+    store.addAudit({ appId: access.bot.app_id, actorId: String(userId), action: 'command.dispatch', detail: action });
+    res.json({ ok: true });
   });
 
   // ── Team management ─────────────────────────────────
@@ -343,6 +393,15 @@ function mountConfigRoutes(app) {
     // The bot polls this on an interval, so it doubles as an uptime heartbeat.
     store.recordHeartbeat(appId);
     res.json({ ok: true, settings: store.getConfig(appId) });
+  });
+
+  // ── A customer's running bot polls for dashboard-dispatched commands ──
+  app.get('/api/bot/commands', botLimit, botAuth, (req, res) => {
+    const appId = String(req.query.appId || '');
+    if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
+    if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
+    store.recordHeartbeat(appId);
+    res.json({ ok: true, commands: store.takePendingCommands(appId) });
   });
 
   // ── A customer's running bot reports command usage ──

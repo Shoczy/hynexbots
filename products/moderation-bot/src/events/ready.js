@@ -4,6 +4,34 @@ const { Events } = require('discord.js');
 const config = require('../config');
 const { ConfigClient } = require('../lib/configClient');
 const { setSettings, cfg } = require('../lib/state');
+const { panelPayload } = require('../verification');
+const { buildMessagePayload } = require('../lib/messages');
+
+/** Post a payload to a globally-unique channel id, if it's reachable. */
+async function postToChannel(client, channelId, payload) {
+  if (!channelId || !payload) return false;
+  const ch = await client.channels.fetch(channelId).catch(() => null);
+  if (!ch?.isTextBased?.()) return false;
+  await ch.send(payload).catch(() => {});
+  return true;
+}
+
+/** Run a dashboard-dispatched action (see config-service DISPATCH_ACTIONS). */
+async function runDashboardCommand(client, action) {
+  if (action === 'post_verify_panel') {
+    if (!cfg('modules.verification', false)) return;
+    await postToChannel(client, cfg('verification.channelId', ''), panelPayload());
+  } else if (action === 'welcome_test') {
+    if (!cfg('modules.welcome', false)) return;
+    const block = cfg('messages.welcome', null);
+    const ch = block?.channelId ? await client.channels.fetch(block.channelId).catch(() => null) : null;
+    if (!ch?.isTextBased?.()) return;
+    // Synthetic "member" so {user}/{server} variables resolve for the test post.
+    const member = { id: client.user.id, user: client.user, displayName: client.user.username, guild: ch.guild };
+    const payload = buildMessagePayload(block, member);
+    if (payload) await ch.send(payload).catch(() => {});
+  }
+}
 
 /** Debounced per-guild resync so a burst of role/channel edits = one sync. */
 function makeSyncer(client) {
@@ -61,6 +89,10 @@ module.exports = {
       clearTimeout(nickTimer);
       nickTimer = setTimeout(() => applyNickname(client), 500);
     });
+
+    // Execute actions the customer triggers from the dashboard (e.g. post the
+    // verify panel) without them needing to run a slash command in Discord.
+    configClient.startCommands((action) => runDashboardCommand(client, action));
 
     await applyNickname(client);
 

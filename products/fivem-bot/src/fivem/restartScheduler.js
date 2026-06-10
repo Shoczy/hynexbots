@@ -67,6 +67,15 @@ async function tick() {
   }
 }
 
+/** Post a restart announcement on demand (dashboard-dispatched). minutes=0 → now. */
+async function manualAnnounce(minutes) {
+  if (minutes > 0) {
+    await announce(`**{server}** restarts in **${minutes} minute${minutes === 1 ? '' : 's'}**.`, COLORS.warning);
+  } else {
+    await announce('**{server}** is restarting now. You may briefly lose connection.', COLORS.danger);
+  }
+}
+
 function start(c) {
   client = c;
   // Align to the top of the next minute, then tick every minute.
@@ -78,4 +87,4 @@ function start(c) {
   }, delay);
 }
 
-module.exports = { start, tick };
+module.exports = { start, tick, manualAnnounce };

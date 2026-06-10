@@ -2,6 +2,7 @@
 
 import { Card, TextField, ChannelField, RoleField } from './settingsKit';
 import { EmbedPreview } from './EmbedPreview';
+import { SendAction } from './SendAction';
 import { CHANNEL_TYPES } from '@/lib/guildContext';
 import type { VerificationSettings } from '@/lib/settings';
 
@@ -10,11 +11,13 @@ export function VerificationEditor({
   onChange,
   accent,
   botName,
+  appId,
 }: {
   value: VerificationSettings;
   onChange: (v: VerificationSettings) => void;
   accent?: string;
   botName?: string;
+  appId?: string;
 }) {
   const set = (patch: Partial<VerificationSettings>) => onChange({ ...value, ...patch });
 
@@ -23,7 +26,7 @@ export function VerificationEditor({
       <Card title="Gate setup" desc="Where the verify button lives and what role it grants.">
         <ChannelField
           label="Verification channel"
-          hint="Where the verification panel is posted. Run /verify-panel there to publish it."
+          hint="Where the verification panel is posted."
           types={CHANNEL_TYPES.text}
           value={value.channelId}
           onChange={(channelId) => set({ channelId })}
@@ -34,6 +37,16 @@ export function VerificationEditor({
           value={value.roleId}
           onChange={(roleId) => set({ roleId })}
         />
+        {appId && (
+          <div className="border-t border-ink-700/60 pt-3">
+            <SendAction
+              appId={appId}
+              action="post_verify_panel"
+              label="Post the verify panel now"
+              hint="Publishes it to the channel above — no slash command needed. Save changes first."
+            />
+          </div>
+        )}
       </Card>
 
       <Card title="Panel content" desc="The message members see before they verify.">

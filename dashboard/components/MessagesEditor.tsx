@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Field, Toggle } from './ui';
 import { Card, RolesField } from './settingsKit';
 import { DiscordPreview } from './DiscordPreview';
+import { SendAction } from './SendAction';
 import { MATCH_MODES, VARIABLES, type Settings, type MessageBlock, type AutoResponse } from '@/lib/settings';
 
 type Messages = Settings['messages'];
@@ -12,10 +13,12 @@ export function MessagesEditor({
   value,
   onChange,
   botName,
+  appId,
 }: {
   value: Messages;
   onChange: (m: Messages) => void;
   botName: string;
+  appId?: string;
 }) {
   return (
     <div className="space-y-8">
@@ -27,6 +30,16 @@ export function MessagesEditor({
         block={value.welcome}
         botName={botName}
         onChange={(welcome) => onChange({ ...value, welcome })}
+        footer={
+          appId ? (
+            <SendAction
+              appId={appId}
+              action="welcome_test"
+              label="Send a test welcome"
+              hint="Posts the welcome message above to its channel. Save changes first."
+            />
+          ) : null
+        }
       />
 
       <BlockEditor
@@ -84,12 +97,14 @@ function BlockEditor({
   block,
   botName,
   onChange,
+  footer,
 }: {
   title: string;
   subtitle: string;
   block: MessageBlock;
   botName: string;
   onChange: (b: MessageBlock) => void;
+  footer?: ReactNode;
 }) {
   const set = (patch: Partial<MessageBlock>) => onChange({ ...block, ...patch });
   const setEmbed = (patch: Partial<MessageBlock['embed']>) => onChange({ ...block, embed: { ...block.embed, ...patch } });
@@ -161,6 +176,8 @@ function BlockEditor({
           </div>
         </div>
       )}
+
+      {block.enabled && footer && <div className="mt-4 border-t border-ink-700/60 pt-4">{footer}</div>}
     </section>
   );
 }

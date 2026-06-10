@@ -357,7 +357,7 @@ export default function EditorPage() {
 
           {tab === 'messages' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <MessagesEditor value={settings.messages} onChange={setMessages} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
+              <MessagesEditor value={settings.messages} onChange={setMessages} botName={settings.basics.nickname || bot?.name || 'Your Bot'} appId={appId} />
             </motion.div>
           )}
 
@@ -369,7 +369,7 @@ export default function EditorPage() {
 
           {tab === 'verification' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <VerificationEditor value={settings.verification ?? defaultVerification()} onChange={setVerification} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
+              <VerificationEditor value={settings.verification ?? defaultVerification()} onChange={setVerification} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} appId={appId} />
             </motion.div>
           )}
 
@@ -387,7 +387,7 @@ export default function EditorPage() {
 
           {tab === 'fivem' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <FiveMEditor value={settings.fivem ?? defaultFiveM()} onChange={setFiveM} />
+              <FiveMEditor value={settings.fivem ?? defaultFiveM()} onChange={setFiveM} appId={appId} />
             </motion.div>
           )}
 

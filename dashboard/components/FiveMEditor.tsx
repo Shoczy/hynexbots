@@ -3,13 +3,22 @@
 import type { FiveMSettings } from '@/lib/settings';
 import { CHANNEL_TYPES } from '@/lib/guildContext';
 import { Card, Row, TextField, NumInput, ChannelField, RoleField, ChipInput } from './settingsKit';
+import { SendAction } from './SendAction';
 
 /**
  * Editor for the FiveM bot. Four self-contained systems, each behind its own
  * enable toggle so a customer turns on only what their server runs:
  *   live status embed · role whitelist · in-game reports · restart announcements.
  */
-export function FiveMEditor({ value, onChange }: { value: FiveMSettings; onChange: (v: FiveMSettings) => void }) {
+export function FiveMEditor({
+  value,
+  onChange,
+  appId,
+}: {
+  value: FiveMSettings;
+  onChange: (v: FiveMSettings) => void;
+  appId?: string;
+}) {
   const set = <K extends keyof FiveMSettings>(key: K, patch: Partial<FiveMSettings[K]>) =>
     onChange({ ...value, [key]: { ...value[key], ...patch } });
 
@@ -54,6 +63,9 @@ export function FiveMEditor({ value, onChange }: { value: FiveMSettings; onChang
               <NumInput value={value.status.refreshSec} onChange={(n) => set('status', { refreshSec: n })} min={30} max={600} />
               <span className="text-sm text-mist-muted">seconds</span>
             </div>
+            {appId && (
+              <SendAction appId={appId} action="fivem_post_status" label="Post / refresh status now" hint="Posts the status embed to the channel above. Save changes first." />
+            )}
           </div>
         </Row>
 
@@ -144,6 +156,12 @@ export function FiveMEditor({ value, onChange }: { value: FiveMSettings; onChang
                 validate={(s) => /^\d{1,3}$/.test(s) && +s > 0 && +s <= 120}
               />
             </div>
+            {appId && (
+              <div className="flex flex-wrap gap-2 border-t border-ink-700/60 pt-3">
+                <SendAction appId={appId} action="fivem_announce_restart" payload={{ minutes: 5 }} label="Announce restart in 5 min" />
+                <SendAction appId={appId} action="fivem_announce_restart" payload={{ minutes: 0 }} label="Announce restart now" />
+              </div>
+            )}
           </div>
         </Row>
       </Card>

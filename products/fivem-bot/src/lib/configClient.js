@@ -44,7 +44,43 @@ class ConfigClient {
   stop() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
+    if (this._cmdTimer) clearInterval(this._cmdTimer);
+    this._cmdTimer = null;
     this.flushUsage().catch(() => {}); // best-effort final flush
+  }
+
+  /** Fetch + claim any dashboard-dispatched commands waiting for this bot. */
+  async fetchCommands() {
+    const url = `${this.baseUrl}/api/bot/commands?appId=${encodeURIComponent(this.appId)}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${this.botKey}` } });
+    if (!res.ok) throw new Error(`commands fetch failed: ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data.commands) ? data.commands : [];
+  }
+
+  /**
+   * Poll for dashboard-dispatched commands and run each through `handler(action,
+   * payload)`. A short interval keeps "post this panel" feeling near-instant.
+   */
+  startCommands(handler, intervalSec = 5) {
+    const poll = async () => {
+      let cmds = [];
+      try {
+        cmds = await this.fetchCommands();
+      } catch {
+        return; // service briefly unreachable — try next tick
+      }
+      for (const c of cmds) {
+        try {
+          await handler(c.action, c.payload || {});
+        } catch (e) {
+          console.error('command failed:', c.action, e.message);
+        }
+      }
+    };
+    this._cmdTimer = setInterval(poll, Math.max(2, intervalSec) * 1000);
+    if (this._cmdTimer.unref) this._cmdTimer.unref();
+    poll();
   }
 
   /** Count a command invocation; flushed to the dashboard on the poll interval. */

@@ -73,14 +73,14 @@ test('module toggles persist across save/reload (regression)', () => {
   // dropped the rest on save — toggling antinuke/verification ON silently reverted.
   const features = resolveFeatures(store.getBot(APP)); // moderation (Security)
   const incoming = sanitizeSettings(
-    { modules: { moderation: true, antinuke: true, verification: true, reactionroles: true } },
+    { modules: { moderation: true, antinuke: true, verification: true, welcome: true } },
     features,
   );
   store.setConfig(APP, incoming);
   const back = store.getConfig(APP);
   assert.equal(back.modules.antinuke, true, 'antinuke persists');
   assert.equal(back.modules.verification, true, 'verification persists');
-  assert.equal(back.modules.reactionroles, true, 'reaction roles persist');
+  assert.equal(back.modules.welcome, true, 'welcome persists');
 });
 
 test('sanitizeLeveling clamps values and keeps only valid role rewards', () => {
@@ -118,17 +118,20 @@ test('moderation product is now a multi-module guardian', () => {
   assert.equal(saved.modules.fivem, false, 'fivem stays out of scope');
 });
 
-test('moderation guardian bundles all guardian modules', () => {
+test('security bot bundles only security-relevant modules', () => {
   const APP7 = '100000000000000007';
   store.registerBot({ appId: APP7, name: 'Guardian2', type: 'moderation', ownerId: OWNER, withKey: false });
   const f = resolveFeatures(store.getBot(APP7));
-  for (const m of ['verification', 'reactionroles', 'antinuke', 'welcome', 'leveling']) {
+  for (const m of ['moderation', 'verification', 'antinuke', 'welcome']) {
     assert.ok(f.modules.includes(m), `bundles ${m}`);
   }
-  const saved = sanitizeSettings({ modules: { reactionroles: true, antinuke: true, leveling: true } }, f);
-  assert.equal(saved.modules.reactionroles, true);
+  // Reaction roles + leveling are NOT part of the security scope.
+  assert.ok(!f.modules.includes('reactionroles'), 'no reaction roles');
+  assert.ok(!f.modules.includes('leveling'), 'no leveling');
+  const saved = sanitizeSettings({ modules: { antinuke: true, reactionroles: true, leveling: true } }, f);
   assert.equal(saved.modules.antinuke, true);
-  assert.equal(saved.modules.leveling, true);
+  assert.equal(saved.modules.reactionroles, false, 'reaction roles forced off (out of scope)');
+  assert.equal(saved.modules.leveling, false, 'leveling forced off (out of scope)');
 });
 
 test('sanitizeReactionRoles drops roles without an id/label and caps panels', () => {

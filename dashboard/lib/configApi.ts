@@ -48,6 +48,12 @@ export const configApi = {
       body: JSON.stringify({ userId, settings }),
     });
   },
+  dispatch(appId: string, userId: string, action: string, payload?: Record<string, unknown>) {
+    return call(`/api/bots/${encodeURIComponent(appId)}/command`, {
+      method: 'POST',
+      body: JSON.stringify({ userId, action, payload: payload || {} }),
+    });
+  },
   getProcess(appId: string, userId: string) {
     return call(`/api/bots/${encodeURIComponent(appId)}/process?userId=${encodeURIComponent(userId)}`);
   },

@@ -165,11 +165,11 @@ const ALL_FEATURES: Features = {
 };
 
 export const PRODUCT_SCOPES: Record<string, Features> = {
-  // Sold as "Security".
+  // Sold as "Security" — only security-relevant modules.
   moderation: {
-    tabs: ['basics', 'modules', 'moderation', 'verification', 'reactionroles', 'antinuke', 'messages', 'leveling', 'commands'],
-    modules: ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling'],
-    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'utility'],
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'messages', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke', 'welcome'],
+    commandGroups: ['moderation', 'verification', 'utility'],
   },
   fivem: {
     tabs: ['basics', 'modules', 'fivem', 'messages', 'commands'],
