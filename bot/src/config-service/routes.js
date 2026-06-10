@@ -33,6 +33,28 @@ function sanitizeActionPayload(action, payload) {
   return {};
 }
 
+/**
+ * Why an action can't run yet (missing channel, module off, …), as an error
+ * code the dashboard turns into a helpful message — so the button never claims
+ * "sent" when the bot would silently do nothing. Returns null when it's ready.
+ */
+function dispatchBlocker(action, s) {
+  const f = s.fivem || {};
+  if (action === 'post_verify_panel') {
+    if (!s.modules?.verification) return 'verification_off';
+    if (!s.verification?.channelId) return 'no_verify_channel';
+  } else if (action === 'welcome_test') {
+    if (!s.modules?.welcome) return 'welcome_off';
+    if (!s.messages?.welcome?.enabled || !s.messages?.welcome?.channelId) return 'welcome_not_ready';
+  } else if (action === 'fivem_post_status') {
+    if (!(f.server?.host)) return 'no_server_host';
+    if (!f.status?.channelId) return 'no_status_channel';
+  } else if (action === 'fivem_announce_restart') {
+    if (!f.restarts?.channelId) return 'no_restart_channel';
+  }
+  return null;
+}
+
 /** Top-level config sections that differ between two settings objects. */
 function changedSections(before, after) {
   const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
@@ -214,6 +236,8 @@ function mountConfigRoutes(app) {
     if (!launcher.isRunning(access.bot.app_id) && !store.getProcess(access.bot.app_id)) {
       return res.status(400).json({ ok: false, error: 'not_hosted' });
     }
+    const blocker = dispatchBlocker(action, store.getConfig(access.bot.app_id));
+    if (blocker) return res.status(400).json({ ok: false, error: blocker });
 
     store.enqueueCommand(access.bot.app_id, action, sanitizeActionPayload(action, payload));
     store.addAudit({ appId: access.bot.app_id, actorId: String(userId), action: 'command.dispatch', detail: action });

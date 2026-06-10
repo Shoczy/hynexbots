@@ -11,6 +11,13 @@ const ERRORS: Record<string, string> = {
   no_access: 'You don’t have access to this bot.',
   unknown_action: 'Unknown action.',
   service_unavailable: 'The bot service is unreachable right now.',
+  verification_off: 'Enable the Verification module first.',
+  no_verify_channel: 'Set a verification channel and save first.',
+  welcome_off: 'Enable the Welcome module first.',
+  welcome_not_ready: 'Enable the welcome message and set its channel, then save.',
+  no_server_host: 'Set your FiveM server address and save first.',
+  no_status_channel: 'Set a status channel and save first.',
+  no_restart_channel: 'Set a restart announcement channel and save first.',
 };
 
 /**
