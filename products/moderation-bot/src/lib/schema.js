@@ -23,10 +23,8 @@ function defaultSettings() {
     modules: {
       moderation: true,
       verification: false,
-      reactionroles: false,
       antinuke: false,
       welcome: false,
-      leveling: false,
     },
     commands: {}, // { [name]: { enabled, roles[] } }
     messages: { welcome: messageBlock(), leave: messageBlock(), autoresponses: [], autoRoleIds: [] },
@@ -38,7 +36,6 @@ function defaultSettings() {
       buttonLabel: 'Verify',
       successMessage: 'You’re verified — welcome aboard! 🎉',
     },
-    reactionRoles: { panels: [] },
     antiNuke: {
       punishment: 'strip',
       limits: {
@@ -50,14 +47,6 @@ function defaultSettings() {
       whitelistUserIds: [],
       whitelistRoleIds: [],
       alertChannelId: '',
-    },
-    leveling: {
-      xpPerMessage: { min: 15, max: 25 },
-      cooldownSec: 60,
-      levelUp: { enabled: true, channelId: '', message: 'GG {user}, you reached level {level}! 🎉' },
-      stackRewards: true,
-      rewards: [],
-      noXpRoleIds: [],
     },
     moderation: {
       automod: {

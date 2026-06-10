@@ -20,12 +20,6 @@ module.exports = {
     if (cfg('modules.verification', false)) {
       fields.push({ name: '✅ Verification', value: '`/verify-panel` — post the verify button members click to gain access.' });
     }
-    if (cfg('modules.reactionroles', false)) {
-      fields.push({ name: '🎭 Reaction Roles', value: '`/roles-panel` — post a panel where members self-assign roles.' });
-    }
-    if (cfg('modules.leveling', false)) {
-      fields.push({ name: '⭐ Leveling', value: '`/rank` `/levels` `/setxp` — XP, ranks and role rewards.' });
-    }
     if (cfg('modules.antinuke', false)) {
       fields.push({ name: '🛡️ Anti-Nuke', value: 'Auto-stops mass bans/deletes by rogue admins. Configure limits in your dashboard.' });
     }

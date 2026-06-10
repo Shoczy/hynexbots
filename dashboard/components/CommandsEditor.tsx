@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Toggle } from './ui';
 import { RolePicker as GuildRolePicker } from './settingsKit';
+import { EmbedPreview as MessagePreview } from './EmbedPreview';
 import {
   COMMAND_GROUPS,
   COMMAND_VARIABLES,
@@ -137,29 +138,18 @@ const SAMPLE: Record<string, string> = {
 const fillSample = (s: string) => String(s || '').replace(/\{(\w+)\}/g, (_, k) => SAMPLE[k] ?? `{${k}}`);
 
 function EmbedPreview({ embed, botName }: { embed: CommandEmbed; botName: string }) {
-  const empty = !embed.title && !embed.description && !embed.footer;
   return (
     <div className="rounded-xl border border-ink-700 bg-[#313338] p-3">
       <span className="text-[10px] uppercase tracking-wide text-mist-faint">Preview</span>
-      <div className="mt-2 flex gap-3 text-sm">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent/30 text-base">🤖</div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-white">{botName || 'Your Bot'}</span>
-            <span className="rounded bg-accent px-1.5 text-[10px] font-semibold text-white">APP</span>
-          </div>
-          {empty ? (
-            <p className="mt-1 italic text-[#6d7178]">Type a title or description to preview your embed…</p>
-          ) : (
-            <div className="mt-1 max-w-md overflow-hidden rounded border-l-4 bg-[#2b2d31]" style={{ borderColor: embed.color || '#6366f1' }}>
-              <div className="p-3">
-                {embed.title && <p className="font-semibold text-white">{fillSample(embed.title)}</p>}
-                {embed.description && <p className="mt-1 whitespace-pre-wrap break-words text-[#dbdee1]">{fillSample(embed.description)}</p>}
-                {embed.footer && <p className="mt-2 text-xs text-[#949ba4]">{fillSample(embed.footer)}</p>}
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="mt-2 [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0">
+        <MessagePreview
+          botName={botName}
+          accent={embed.color || '#6366f1'}
+          title={embed.title ? fillSample(embed.title) : undefined}
+          description={embed.description ? fillSample(embed.description) : undefined}
+          footer={embed.footer ? fillSample(embed.footer) : undefined}
+          emptyHint="Type a title or description to preview your embed…"
+        />
       </div>
     </div>
   );
