@@ -163,13 +163,17 @@ function defaultSettings() {
       language: 'en',
       logChannelId: '',
     },
+    // Every toggleable module MUST be listed here — mergeSettings only keeps
+    // module keys present in this default, so a missing key would be silently
+    // dropped on save (and the dashboard toggle would appear to "turn back off").
     modules: {
       moderation: true,
+      verification: false,
+      reactionroles: false,
+      antinuke: false,
       welcome: false,
-      economy: false,
-      music: false,
-      tickets: false,
       leveling: false,
+      fivem: true,
     },
     messages: {
       welcome: messageBlock(),
@@ -184,30 +188,46 @@ function defaultSettings() {
     verification: verificationDefaults(),
     reactionRoles: reactionRolesDefaults(),
     antiNuke: antiNukeDefaults(),
-    tickets: ticketsDefaults(),
-    applications: applicationsDefaults(),
-    faq: faqDefaults(),
-    economy: economyDefaults(),
-    giveaways: giveawaysDefaults(),
-    music: musicDefaults(),
-    playlists: playlistsDefaults(),
     leveling: levelingDefaults(),
+    fivem: fivemDefaults(),
   };
 }
 
-/** Saved-playlist settings (the playlists themselves live in the bot's local db). */
-function playlistsDefaults() {
+/**
+ * Tailored config for the FiveM bot. Four optional systems, each with its own
+ * enable flag so customers turn on only what they run:
+ *   - status:    live "server status" embed (player count, hostname) refreshed on a timer
+ *   - whitelist: grant/revoke a Discord role + track in-game identifiers
+ *   - reports:   in-game /report calls forwarded to a Discord channel (HTTP intake)
+ *   - restarts:  scheduled restart announcements with countdown warnings
+ */
+function fivemDefaults() {
   return {
-    djOnly: false, // restrict save/delete to DJ roles
-    maxPerGuild: 25, // cap stored playlists per server
-  };
-}
-
-/** Giveaways: who may run them and an optional default entry-gate role. */
-function giveawaysDefaults() {
-  return {
-    managerRoleIds: [], // roles allowed to start/end/reroll (besides admins)
-    requireRoleId: '', // optional default role required to enter
+    server: {
+      host: '', // FiveM server address, e.g. 1.2.3.4:30120 or play.example.com
+      name: '', // optional display name override (falls back to the server's hostname)
+    },
+    status: {
+      enabled: false,
+      channelId: '', // channel the live status embed is posted/updated in
+      refreshSec: 60, // how often the embed refreshes (30–600)
+    },
+    whitelist: {
+      enabled: false,
+      roleId: '', // Discord role granted to whitelisted members
+      logChannelId: '', // optional: where add/remove actions are logged
+    },
+    reports: {
+      enabled: false,
+      channelId: '', // channel in-game reports are posted to
+      pingRoleId: '', // optional role pinged on a new report
+    },
+    restarts: {
+      enabled: false,
+      channelId: '', // channel restart announcements are posted to
+      times: [], // ['04:00','16:00'] — 24h server-local restart times
+      warnMinutes: [15, 5, 1], // countdown warnings before each restart
+    },
   };
 }
 
@@ -285,79 +305,6 @@ function antiNukeDefaults() {
     whitelistUserIds: [], // trusted users exempt from limits
     whitelistRoleIds: [], // holders of these roles are exempt
     alertChannelId: '', // where anti-nuke alerts are posted (falls back to the mod log)
-  };
-}
-
-/** Tailored config for ticket/support bots. */
-function ticketsDefaults() {
-  return {
-    staffRoleIds: [],
-    pingRoleIds: [], // roles pinged when a new ticket opens
-    categoryId: '', // Discord category channel new tickets are created under
-    transcripts: { enabled: false, channelId: '' },
-    claiming: false, // staff "claim" system
-    maxOpenPerUser: 1,
-    autoClose: { enabled: false, hours: 48 }, // auto-close after inactivity
-    feedback: false, // ask the member to rate support when a ticket closes
-    openMessage: 'Thanks for reaching out — a staff member will be with you shortly.',
-    panel: {
-      title: 'Need help?',
-      description: 'Click the button below to open a support ticket.',
-      buttonLabel: 'Open a ticket',
-    },
-    categories: [], // [{ id, label, emoji }] — ticket topics
-  };
-}
-
-/** Application forms: members fill a modal, staff approve/deny in a review channel. */
-function applicationsDefaults() {
-  return {
-    reviewChannelId: '', // where submissions are posted for staff review
-    approveRoleId: '', // role granted on approval (optional)
-    // [{ id, name, description, questions: [{ id, label, style: short|paragraph, required }] }]
-    forms: [],
-  };
-}
-
-/** Auto-answering FAQ: keyword-matched canned replies + a /faq lookup command. */
-function faqDefaults() {
-  return {
-    autoAnswer: true, // reply automatically when a message matches an entry
-    // [{ id, keywords: [..], answer, match: contains|exact }]
-    entries: [],
-  };
-}
-
-/** Tailored config for economy bots. */
-function economyDefaults() {
-  return {
-    currencyName: 'coins',
-    currencySymbol: '🪙',
-    startingBalance: 100,
-    daily: { enabled: true, amount: 250, streakBonus: 50 },
-    weekly: { enabled: false, amount: 1000 },
-    work: { enabled: true, min: 50, max: 200, cooldownSec: 3600 },
-    rob: { enabled: false, successPercent: 50, cooldownSec: 86400 }, // steal from other members
-    payTax: 0, // % fee taken on /pay transfers (0–50)
-    gambling: false, // coinflip / slots
-    leaderboard: true,
-    shop: [], // [{ id, name, price, roleId, description }]
-  };
-}
-
-/** Tailored config for music bots. */
-function musicDefaults() {
-  return {
-    defaultVolume: 50,
-    maxQueueLength: 100,
-    maxTrackMinutes: 0, // reject tracks longer than this (0 = no limit)
-    djRoleIds: [],
-    djOnly: false, // restrict playback controls to DJ roles
-    voteSkip: { enabled: false, percent: 50 }, // listeners can vote to skip
-    autoLeaveSec: 60, // leave when the channel is empty (0 = never)
-    stay247: false, // 24/7 mode — never auto-leave
-    allowFilters: true, // audio filters/effects
-    announceNowPlaying: true,
   };
 }
 

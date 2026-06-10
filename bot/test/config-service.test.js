@@ -63,9 +63,24 @@ test('config: per-command settings survive save/load (regression)', () => {
 });
 
 test('sanitizeSettings enforces product scope', () => {
-  const features = resolveFeatures(store.getBot(APP)); // moderation product
-  const saved = sanitizeSettings({ modules: { economy: true, moderation: true } }, features);
-  assert.equal(saved.modules.economy, false, 'out-of-scope module forced off');
+  const features = resolveFeatures(store.getBot(APP)); // moderation (Security) product
+  const saved = sanitizeSettings({ modules: { fivem: true, moderation: true } }, features);
+  assert.equal(saved.modules.fivem, false, 'out-of-scope module forced off');
+});
+
+test('module toggles persist across save/reload (regression)', () => {
+  // Historically defaultSettings().modules listed only a few keys, so mergeSettings
+  // dropped the rest on save — toggling antinuke/verification ON silently reverted.
+  const features = resolveFeatures(store.getBot(APP)); // moderation (Security)
+  const incoming = sanitizeSettings(
+    { modules: { moderation: true, antinuke: true, verification: true, reactionroles: true } },
+    features,
+  );
+  store.setConfig(APP, incoming);
+  const back = store.getConfig(APP);
+  assert.equal(back.modules.antinuke, true, 'antinuke persists');
+  assert.equal(back.modules.verification, true, 'verification persists');
+  assert.equal(back.modules.reactionroles, true, 'reaction roles persist');
 });
 
 test('sanitizeLeveling clamps values and keeps only valid role rewards', () => {
@@ -97,10 +112,10 @@ test('moderation product is now a multi-module guardian', () => {
   assert.ok(f.modules.includes('verification') && f.modules.includes('welcome'), 'bundles verification + welcome');
   assert.ok(f.tabs.includes('verification') && f.tabs.includes('modules'), 'exposes verification + modules tabs');
   // The bundled modules can actually be enabled (not clamped off as out-of-scope).
-  const saved = sanitizeSettings({ modules: { welcome: true, verification: true, economy: true } }, f);
+  const saved = sanitizeSettings({ modules: { welcome: true, verification: true, fivem: true } }, f);
   assert.equal(saved.modules.welcome, true, 'welcome is in scope');
   assert.equal(saved.modules.verification, true, 'verification is in scope');
-  assert.equal(saved.modules.economy, false, 'economy stays out of scope');
+  assert.equal(saved.modules.fivem, false, 'fivem stays out of scope');
 });
 
 test('moderation guardian bundles all guardian modules', () => {
@@ -164,100 +179,41 @@ test('sanitizeVerification keeps valid ids and falls back on empty text', () => 
   assert.equal(v.buttonLabel, 'Unlock', 'custom button label kept');
 });
 
-test('tickets product is now a full support suite', () => {
+test('fivem product exposes its own scope', () => {
   const APP8 = '100000000000000008';
-  store.registerBot({ appId: APP8, name: 'Concierge', type: 'tickets', ownerId: OWNER, withKey: false });
+  store.registerBot({ appId: APP8, name: 'Convoy', type: 'fivem', ownerId: OWNER, withKey: false });
   const f = resolveFeatures(store.getBot(APP8));
-  for (const m of ['tickets', 'applications', 'faq', 'welcome']) {
+  for (const m of ['fivem', 'welcome']) {
     assert.ok(f.modules.includes(m), `bundles ${m}`);
   }
-  assert.ok(f.tabs.includes('applications') && f.tabs.includes('faq'));
-  const saved = sanitizeSettings({ modules: { applications: true, faq: true, moderation: true } }, f);
-  assert.equal(saved.modules.applications, true);
-  assert.equal(saved.modules.faq, true);
+  assert.ok(f.tabs.includes('fivem') && f.tabs.includes('modules'), 'exposes fivem + modules tabs');
+  assert.ok(f.commandGroups.includes('fivem'), 'includes the fivem command group');
+  const saved = sanitizeSettings({ modules: { fivem: true, welcome: true, moderation: true } }, f);
+  assert.equal(saved.modules.fivem, true);
+  assert.equal(saved.modules.welcome, true);
   assert.equal(saved.modules.moderation, false, 'out-of-scope module forced off');
 });
 
-test('sanitizeApplications caps questions at 5 and drops empty forms', () => {
+test('sanitizeFivem clamps refresh, drops bad times, sorts warnings', () => {
   const saved = sanitizeSettings({
-    applications: {
-      reviewChannelId: '123456789012345678',
-      forms: [
-        { name: 'Staff', questions: Array.from({ length: 8 }, (_, i) => ({ label: `Q${i}`, style: 'short' })) },
-        { name: 'Empty', questions: [{ label: '' }] }, // dropped — no valid questions
-      ],
+    fivem: {
+      server: { host: '  1.2.3.4:30120 ', name: 'My RP' },
+      status: { enabled: true, channelId: '123456789012345678', refreshSec: 5 }, // below the 30s floor
+      whitelist: { enabled: true, roleId: 'nope' }, // invalid id dropped
+      restarts: { enabled: true, channelId: '123456789012345678', times: ['04:00', '16:00', '25:99', 'xx'], warnMinutes: [5, 15, 1, 999] },
     },
   });
-  const forms = saved.applications.forms;
-  assert.equal(forms.length, 1, 'form with no valid questions is dropped');
-  assert.equal(forms[0].questions.length, 5, 'questions capped at Discord modal limit');
-  assert.ok(forms[0].questions[0].id, 'questions get generated ids');
-});
-
-test('sanitizeFaq keeps entries with keywords + answer, validates match', () => {
-  const saved = sanitizeSettings({
-    faq: {
-      autoAnswer: false,
-      entries: [
-        { keywords: ['Refund', 'REFUND', 'money back'], answer: 'See #refunds.', match: 'weird' },
-        { keywords: [], answer: 'orphan' }, // dropped — no keywords
-        { keywords: ['x'], answer: '' }, // dropped — no answer
-      ],
-    },
-  });
-  const faq = saved.faq;
-  assert.equal(faq.autoAnswer, false);
-  assert.equal(faq.entries.length, 1, 'only the complete entry survives');
-  assert.deepEqual(faq.entries[0].keywords, ['refund', 'money back'], 'keywords lowercased + de-duped');
-  assert.equal(faq.entries[0].match, 'contains', 'invalid match falls back');
-});
-
-test('economy product is now an engagement economy', () => {
-  const APP9 = '100000000000000009';
-  store.registerBot({ appId: APP9, name: 'Vault', type: 'economy', ownerId: OWNER, withKey: false });
-  const f = resolveFeatures(store.getBot(APP9));
-  for (const m of ['economy', 'leveling', 'giveaways', 'welcome']) {
-    assert.ok(f.modules.includes(m), `bundles ${m}`);
-  }
-  assert.ok(f.tabs.includes('giveaways') && f.tabs.includes('leveling'));
-  const saved = sanitizeSettings({ modules: { leveling: true, giveaways: true, music: true } }, f);
-  assert.equal(saved.modules.leveling, true);
-  assert.equal(saved.modules.giveaways, true);
-  assert.equal(saved.modules.music, false, 'out-of-scope module forced off');
-});
-
-test('sanitizeGiveaways keeps valid role ids only', () => {
-  const saved = sanitizeSettings({
-    giveaways: { managerRoleIds: ['111111111111111111', 'bad', '111111111111111111'], requireRoleId: 'nope' },
-  });
-  const g = saved.giveaways;
-  assert.deepEqual(g.managerRoleIds, ['111111111111111111'], 'invalid + duplicate ids dropped');
-  assert.equal(g.requireRoleId, '', 'invalid require role dropped');
-});
-
-test('music product is now a full audio experience', () => {
-  const APP10 = '100000000000000010';
-  store.registerBot({ appId: APP10, name: 'Resonance', type: 'music', ownerId: OWNER, withKey: false });
-  const f = resolveFeatures(store.getBot(APP10));
-  for (const m of ['music', 'playlists', 'leveling', 'welcome']) {
-    assert.ok(f.modules.includes(m), `bundles ${m}`);
-  }
-  assert.ok(f.tabs.includes('playlists') && f.tabs.includes('leveling'));
-  const saved = sanitizeSettings({ modules: { playlists: true, leveling: true, economy: true } }, f);
-  assert.equal(saved.modules.playlists, true);
-  assert.equal(saved.modules.leveling, true);
-  assert.equal(saved.modules.economy, false, 'out-of-scope module forced off');
-});
-
-test('sanitizePlaylists clamps maxPerGuild and coerces djOnly', () => {
-  const saved = sanitizeSettings({ playlists: { djOnly: 'yes', maxPerGuild: 9999 } });
-  assert.equal(saved.playlists.djOnly, true);
-  assert.equal(saved.playlists.maxPerGuild, 200, 'clamped to max');
+  const fv = saved.fivem;
+  assert.equal(fv.server.host, '1.2.3.4:30120', 'host trimmed');
+  assert.equal(fv.status.refreshSec, 30, 'refresh clamped up to the 30s floor');
+  assert.equal(fv.whitelist.roleId, '', 'invalid whitelist role dropped');
+  assert.deepEqual(fv.restarts.times, ['04:00', '16:00'], 'invalid times dropped');
+  assert.deepEqual(fv.restarts.warnMinutes, [15, 5, 1], 'warnings filtered + sorted desc');
 });
 
 test('featuresFromModules surfaces each module’s settings tab', () => {
-  const f = featuresFromModules(['economy', 'leveling', 'welcome', 'bogus']);
-  assert.ok(f.tabs.includes('economy') && f.tabs.includes('leveling'), 'system tabs are surfaced');
+  const f = featuresFromModules(['fivem', 'leveling', 'welcome', 'bogus']);
+  assert.ok(f.tabs.includes('fivem') && f.tabs.includes('leveling'), 'system tabs are surfaced');
   assert.ok(f.tabs.includes('messages'), 'welcome maps to the messages tab');
   assert.ok(!f.modules.includes('bogus'), 'unknown modules are dropped');
   assert.ok(f.commandGroups.includes('utility'), 'utility commands always included');

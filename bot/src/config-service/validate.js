@@ -5,12 +5,11 @@ const { defaultSettings } = require('./db');
 const { allowedCommands } = require('./products');
 
 const LANGS = ['en', 'es', 'fr', 'de', 'pt', 'nl', 'it'];
-const MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'economy', 'giveaways', 'music', 'playlists', 'tickets', 'applications', 'faq', 'leveling'];
+const MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'fivem'];
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24h HH:MM
 const MATCH_MODES = ['contains', 'exact', 'startsWith', 'endsWith'];
 const MOD_ACTIONS = ['timeout', 'mute', 'kick', 'ban'];
 const NUKE_PUNISHMENTS = ['strip', 'ban', 'kick'];
-const APP_STYLES = ['short', 'paragraph'];
-const FAQ_MATCH = ['contains', 'exact'];
 
 /** Keep a caller-supplied id if it's clean, otherwise mint a fresh one. */
 const genId = (v) => (/^[\w-]{1,40}$/.test(String(v || '')) ? String(v) : crypto.randomUUID());
@@ -237,185 +236,53 @@ function sanitizeAntiNuke(a, def) {
   };
 }
 
-/** Sanitize the tickets-bot settings section against its defaults. */
-function sanitizeTickets(t, def) {
-  const i = t && typeof t === 'object' ? t : {};
-  const tr = i.transcripts || {};
-  const pn = i.panel || {};
-  const roleIds = (arr) =>
-    Array.isArray(arr) ? [...new Set(arr.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES) : [];
-
-  const categories = Array.isArray(i.categories)
-    ? i.categories
-        .filter((c) => c && typeof c === 'object')
-        .map((c) => ({
-          id: /^[\w-]{1,40}$/.test(String(c.id || '')) ? String(c.id) : crypto.randomUUID(),
-          label: str(c.label, 50, '').trim(),
-          emoji: str(c.emoji, 16, '').trim(),
-        }))
-        .filter((c) => c.label)
-        .slice(0, 20)
-    : [];
-
-  const ac = i.autoClose || {};
-  return {
-    staffRoleIds: roleIds(i.staffRoleIds),
-    pingRoleIds: roleIds(i.pingRoleIds),
-    categoryId: snowflake(i.categoryId),
-    transcripts: { enabled: Boolean(tr.enabled), channelId: snowflake(tr.channelId) },
-    claiming: Boolean(i.claiming),
-    maxOpenPerUser: int(i.maxOpenPerUser, 1, 50, def.maxOpenPerUser),
-    autoClose: { enabled: Boolean(ac.enabled), hours: int(ac.hours, 1, 720, def.autoClose.hours) },
-    feedback: Boolean(i.feedback),
-    openMessage: str(i.openMessage, 1000, def.openMessage),
-    panel: {
-      title: str(pn.title, 256, def.panel.title),
-      description: str(pn.description, 1000, def.panel.description),
-      buttonLabel: str(pn.buttonLabel, 80, def.panel.buttonLabel) || def.panel.buttonLabel,
-    },
-    categories,
-  };
-}
-
-/** Sanitize application forms. */
-function sanitizeApplications(a, def) {
-  const i = a && typeof a === 'object' ? a : {};
-  const forms = Array.isArray(i.forms)
-    ? i.forms
-        .filter((f) => f && typeof f === 'object')
-        .slice(0, 10)
-        .map((f) => ({
-          id: genId(f.id),
-          name: str(f.name, 80, '').trim() || 'Application',
-          description: str(f.description, 500, ''),
-          questions: Array.isArray(f.questions)
-            ? f.questions
-                .filter((q) => q && typeof q === 'object')
-                .map((q) => ({
-                  id: genId(q.id),
-                  label: str(q.label, 45, '').trim(), // Discord modal label cap
-                  style: APP_STYLES.includes(q.style) ? q.style : 'short',
-                  required: q.required === undefined ? true : Boolean(q.required),
-                }))
-                .filter((q) => q.label)
-                .slice(0, 5) // Discord modals allow max 5 inputs
-            : [],
-        }))
-        .filter((f) => f.questions.length)
-    : [];
-  return { reviewChannelId: snowflake(i.reviewChannelId), approveRoleId: snowflake(i.approveRoleId), forms };
-}
-
-/** Sanitize the auto-answering FAQ settings. */
-function sanitizeFaq(f, def) {
+/** Sanitize the FiveM-bot settings section against its defaults. */
+function sanitizeFivem(f, def) {
   const i = f && typeof f === 'object' ? f : {};
-  const entries = Array.isArray(i.entries)
-    ? i.entries
-        .filter((e) => e && typeof e === 'object')
-        .slice(0, 50)
-        .map((e) => ({
-          id: genId(e.id),
-          keywords: Array.isArray(e.keywords)
-            ? [...new Set(e.keywords.map((k) => str(k, 50, '').trim().toLowerCase()).filter(Boolean))].slice(0, 20)
-            : [],
-          answer: str(e.answer, 2000, '').trim(),
-          match: FAQ_MATCH.includes(e.match) ? e.match : 'contains',
-        }))
-        .filter((e) => e.keywords.length && e.answer)
+  const sv = i.server || {};
+  const st = i.status || {};
+  const wl = i.whitelist || {};
+  const rp = i.reports || {};
+  const rs = i.restarts || {};
+
+  // Accept "host:port" or "host" — keep it simple, the bot normalises further.
+  const host = str(sv.host, 100, '').trim();
+
+  const times = Array.isArray(rs.times)
+    ? [...new Set(rs.times.map((t) => str(t, 5, '').trim()).filter((t) => TIME_RE.test(t)))].slice(0, 12)
     : [];
-  return { autoAnswer: i.autoAnswer === undefined ? true : Boolean(i.autoAnswer), entries };
-}
-
-/** Sanitize the economy-bot settings section against its defaults. */
-function sanitizeEconomy(e, def) {
-  const i = e && typeof e === 'object' ? e : {};
-  const dy = i.daily || {};
-  const wy = i.weekly || {};
-  const wk = i.work || {};
-  const rb = i.rob || {};
-
-  const shop = Array.isArray(i.shop)
-    ? i.shop
-        .filter((s) => s && typeof s === 'object')
-        .map((s) => ({
-          id: /^[\w-]{1,40}$/.test(String(s.id || '')) ? String(s.id) : crypto.randomUUID(),
-          name: str(s.name, 60, '').trim(),
-          price: int(s.price, 0, 1_000_000_000, 0),
-          roleId: snowflake(s.roleId),
-          description: str(s.description, 200, '').trim(),
-        }))
-        .filter((s) => s.name)
-        .slice(0, 50)
-    : [];
+  const warnMinutes = Array.isArray(rs.warnMinutes)
+    ? [...new Set(rs.warnMinutes.map((m) => Math.round(Number(m))).filter((m) => Number.isFinite(m) && m >= 1 && m <= 120))]
+        .sort((a, b) => b - a)
+        .slice(0, 6)
+    : def.restarts.warnMinutes;
 
   return {
-    currencyName: str(i.currencyName, 24, def.currencyName).trim() || def.currencyName,
-    currencySymbol: str(i.currencySymbol, 8, def.currencySymbol) || def.currencySymbol,
-    startingBalance: int(i.startingBalance, 0, 1_000_000_000, def.startingBalance),
-    daily: {
-      enabled: Boolean(dy.enabled),
-      amount: int(dy.amount, 0, 1_000_000, def.daily.amount),
-      streakBonus: int(dy.streakBonus, 0, 1_000_000, def.daily.streakBonus),
+    server: {
+      host,
+      name: str(sv.name, 80, '').trim(),
     },
-    weekly: {
-      enabled: Boolean(wy.enabled),
-      amount: int(wy.amount, 0, 1_000_000, def.weekly.amount),
+    status: {
+      enabled: Boolean(st.enabled),
+      channelId: snowflake(st.channelId),
+      refreshSec: int(st.refreshSec, 30, 600, def.status.refreshSec),
     },
-    work: {
-      enabled: Boolean(wk.enabled),
-      min: int(wk.min, 0, 1_000_000, def.work.min),
-      max: int(wk.max, 0, 1_000_000, def.work.max),
-      cooldownSec: int(wk.cooldownSec, 0, 86_400, def.work.cooldownSec),
+    whitelist: {
+      enabled: Boolean(wl.enabled),
+      roleId: snowflake(wl.roleId),
+      logChannelId: snowflake(wl.logChannelId),
     },
-    rob: {
-      enabled: Boolean(rb.enabled),
-      successPercent: int(rb.successPercent, 0, 100, def.rob.successPercent),
-      cooldownSec: int(rb.cooldownSec, 0, 604_800, def.rob.cooldownSec),
+    reports: {
+      enabled: Boolean(rp.enabled),
+      channelId: snowflake(rp.channelId),
+      pingRoleId: snowflake(rp.pingRoleId),
     },
-    payTax: int(i.payTax, 0, 50, def.payTax),
-    gambling: Boolean(i.gambling),
-    leaderboard: Boolean(i.leaderboard),
-    shop,
-  };
-}
-
-/** Sanitize the giveaways settings section against its defaults. */
-function sanitizeGiveaways(g, def) {
-  const i = g && typeof g === 'object' ? g : {};
-  return {
-    managerRoleIds: Array.isArray(i.managerRoleIds)
-      ? [...new Set(i.managerRoleIds.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES)
-      : [],
-    requireRoleId: snowflake(i.requireRoleId),
-  };
-}
-
-/** Sanitize the music-bot settings section against its defaults. */
-function sanitizeMusic(m, def) {
-  const i = m && typeof m === 'object' ? m : {};
-  const vs = i.voteSkip || {};
-  return {
-    defaultVolume: int(i.defaultVolume, 0, 200, def.defaultVolume),
-    maxQueueLength: int(i.maxQueueLength, 1, 1000, def.maxQueueLength),
-    maxTrackMinutes: int(i.maxTrackMinutes, 0, 1440, def.maxTrackMinutes),
-    djRoleIds: Array.isArray(i.djRoleIds)
-      ? [...new Set(i.djRoleIds.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES)
-      : [],
-    djOnly: Boolean(i.djOnly),
-    voteSkip: { enabled: Boolean(vs.enabled), percent: int(vs.percent, 1, 100, def.voteSkip.percent) },
-    autoLeaveSec: int(i.autoLeaveSec, 0, 3600, def.autoLeaveSec),
-    stay247: Boolean(i.stay247),
-    allowFilters: Boolean(i.allowFilters),
-    announceNowPlaying: Boolean(i.announceNowPlaying),
-  };
-}
-
-/** Sanitize the saved-playlists settings section. */
-function sanitizePlaylists(p, def) {
-  const i = p && typeof p === 'object' ? p : {};
-  return {
-    djOnly: Boolean(i.djOnly),
-    maxPerGuild: int(i.maxPerGuild, 1, 200, def.maxPerGuild),
+    restarts: {
+      enabled: Boolean(rs.enabled),
+      channelId: snowflake(rs.channelId),
+      times,
+      warnMinutes,
+    },
   };
 }
 
@@ -521,14 +388,8 @@ function sanitizeSettings(input, features = null) {
   out.verification = sanitizeVerification(i.verification, d.verification);
   out.reactionRoles = sanitizeReactionRoles(i.reactionRoles, d.reactionRoles);
   out.antiNuke = sanitizeAntiNuke(i.antiNuke, d.antiNuke);
-  out.tickets = sanitizeTickets(i.tickets, d.tickets);
-  out.applications = sanitizeApplications(i.applications, d.applications);
-  out.faq = sanitizeFaq(i.faq, d.faq);
-  out.economy = sanitizeEconomy(i.economy, d.economy);
-  out.giveaways = sanitizeGiveaways(i.giveaways, d.giveaways);
-  out.music = sanitizeMusic(i.music, d.music);
-  out.playlists = sanitizePlaylists(i.playlists, d.playlists);
   out.leveling = sanitizeLeveling(i.leveling, d.leveling);
+  out.fivem = sanitizeFivem(i.fivem, d.fivem);
 
   return out;
 }

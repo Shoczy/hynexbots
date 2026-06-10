@@ -1,7 +1,7 @@
 {
-  "name": "hynex-moderation-bot",
+  "name": "hynex-fivem-bot",
   "version": "1.0.0",
-  "description": "Hynex Bots — ready-made Security bot (anti-nuke, anti-raid, auto-mod, verification). Pulls its config live from the Hynex dashboard.",
+  "description": "Hynex Bots — ready-made FiveM bot. Live server status, role whitelist, in-game reports and restart announcements. Pulls its config live from the Hynex dashboard.",
   "main": "src/index.js",
   "type": "commonjs",
   "scripts": {

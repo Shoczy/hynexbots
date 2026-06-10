@@ -55,36 +55,20 @@ const config = {
   // render <:name:id> custom emojis — it would show the raw text).
   catalog: [
     {
-      id: 'moderation',
-      label: 'Moderation',
+      id: 'moderation', // internal type id kept as 'moderation' (DB/launcher/invite keys)
+      label: 'Security',
       emoji: '<:shield1:1514034751273566329>',
       webEmoji: '🛡️',
-      price: '$49',
-      description: 'Auto-mod, verification, welcome & anti-raid',
+      price: '€10',
+      description: 'Anti-nuke, anti-raid, auto-mod, verification & welcome',
     },
     {
-      id: 'tickets',
-      label: 'Tickets',
-      emoji: '<:ticket1:1514034787428597872>',
-      webEmoji: '🎟️',
-      price: '$39',
-      description: 'Tickets, applications, FAQ & welcome',
-    },
-    {
-      id: 'economy',
-      label: 'Economy',
-      emoji: '<:coin1:1514034824099139697>',
-      webEmoji: '🪙',
-      price: '$59',
-      description: 'Economy, leveling, giveaways & welcome',
-    },
-    {
-      id: 'music',
-      label: 'Music',
-      emoji: '<:music1:1514034861969641512>',
-      webEmoji: '🎧',
-      price: '$45',
-      description: 'HQ audio, playlists, voice leveling & 24/7',
+      id: 'fivem',
+      label: 'FiveM',
+      emoji: '<:shield1:1514034751273566329>',
+      webEmoji: '🎮',
+      price: '€8',
+      description: 'Live server status, role whitelist, in-game reports & restart alerts',
     },
   ],
 

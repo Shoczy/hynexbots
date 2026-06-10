@@ -16,13 +16,7 @@ import { ModerationEditor } from '@/components/ModerationEditor';
 import { VerificationEditor } from '@/components/VerificationEditor';
 import { ReactionRolesEditor } from '@/components/ReactionRolesEditor';
 import { AntiNukeEditor } from '@/components/AntiNukeEditor';
-import { TicketsEditor } from '@/components/TicketsEditor';
-import { ApplicationsEditor } from '@/components/ApplicationsEditor';
-import { FaqEditor } from '@/components/FaqEditor';
-import { EconomyEditor } from '@/components/EconomyEditor';
-import { GiveawaysEditor } from '@/components/GiveawaysEditor';
-import { MusicEditor } from '@/components/MusicEditor';
-import { PlaylistsEditor } from '@/components/PlaylistsEditor';
+import { FiveMEditor } from '@/components/FiveMEditor';
 import { LevelingEditor } from '@/components/LevelingEditor';
 import {
   MODULES,
@@ -32,13 +26,7 @@ import {
   defaultVerification,
   defaultReactionRoles,
   defaultAntiNuke,
-  defaultTickets,
-  defaultApplications,
-  defaultFaq,
-  defaultGiveaways,
-  defaultEconomy,
-  defaultMusic,
-  defaultPlaylists,
+  defaultFiveM,
   defaultLeveling,
   type Settings,
   type Features,
@@ -46,7 +34,7 @@ import {
 import { GuildProvider, type Guild } from '@/lib/guildContext';
 import { withBase } from '@/lib/paths';
 
-type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'verification' | 'reactionroles' | 'antinuke' | 'tickets' | 'applications' | 'faq' | 'economy' | 'giveaways' | 'music' | 'playlists' | 'leveling' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
+type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'verification' | 'reactionroles' | 'antinuke' | 'fivem' | 'leveling' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'modules', label: 'Modules' },
@@ -55,13 +43,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'verification', label: 'Verification' },
   { id: 'reactionroles', label: 'Reaction Roles' },
   { id: 'antinuke', label: 'Anti-Nuke' },
-  { id: 'tickets', label: 'Tickets' },
-  { id: 'applications', label: 'Applications' },
-  { id: 'faq', label: 'FAQ' },
-  { id: 'economy', label: 'Economy' },
-  { id: 'giveaways', label: 'Giveaways' },
-  { id: 'music', label: 'Music' },
-  { id: 'playlists', label: 'Playlists' },
+  { id: 'fivem', label: 'FiveM' },
   { id: 'leveling', label: 'Leveling' },
   { id: 'commands', label: 'Commands' },
 ];
@@ -73,7 +55,7 @@ const TAB_GROUPS: { label: string; tabs: Tab[] }[] = [
   { label: 'Setup', tabs: ['basics', 'modules', 'messages', 'commands'] },
   {
     label: 'Modules',
-    tabs: ['moderation', 'verification', 'reactionroles', 'antinuke', 'tickets', 'applications', 'faq', 'economy', 'giveaways', 'music', 'playlists', 'leveling'],
+    tabs: ['moderation', 'verification', 'reactionroles', 'antinuke', 'fivem', 'leveling'],
   },
   { label: 'Insights', tabs: ['analytics', 'logs'] },
   { label: 'Manage', tabs: ['team', 'license'] },
@@ -162,32 +144,8 @@ export default function EditorPage() {
     setSettings((s) => (s ? { ...s, antiNuke } : s));
     markDirty();
   }
-  function setTickets(tickets: Settings['tickets']) {
-    setSettings((s) => (s ? { ...s, tickets } : s));
-    markDirty();
-  }
-  function setApplications(applications: Settings['applications']) {
-    setSettings((s) => (s ? { ...s, applications } : s));
-    markDirty();
-  }
-  function setFaq(faq: Settings['faq']) {
-    setSettings((s) => (s ? { ...s, faq } : s));
-    markDirty();
-  }
-  function setEconomy(economy: Settings['economy']) {
-    setSettings((s) => (s ? { ...s, economy } : s));
-    markDirty();
-  }
-  function setGiveaways(giveaways: Settings['giveaways']) {
-    setSettings((s) => (s ? { ...s, giveaways } : s));
-    markDirty();
-  }
-  function setMusic(music: Settings['music']) {
-    setSettings((s) => (s ? { ...s, music } : s));
-    markDirty();
-  }
-  function setPlaylists(playlists: Settings['playlists']) {
-    setSettings((s) => (s ? { ...s, playlists } : s));
+  function setFiveM(fivem: Settings['fivem']) {
+    setSettings((s) => (s ? { ...s, fivem } : s));
     markDirty();
   }
   function setLeveling(leveling: Settings['leveling']) {
@@ -427,45 +385,9 @@ export default function EditorPage() {
             </motion.div>
           )}
 
-          {tab === 'tickets' && (
+          {tab === 'fivem' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <TicketsEditor value={settings.tickets ?? defaultTickets()} onChange={setTickets} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
-            </motion.div>
-          )}
-
-          {tab === 'applications' && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <ApplicationsEditor value={settings.applications ?? defaultApplications()} onChange={setApplications} />
-            </motion.div>
-          )}
-
-          {tab === 'faq' && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <FaqEditor value={settings.faq ?? defaultFaq()} onChange={setFaq} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
-            </motion.div>
-          )}
-
-          {tab === 'economy' && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <EconomyEditor value={settings.economy ?? defaultEconomy()} onChange={setEconomy} />
-            </motion.div>
-          )}
-
-          {tab === 'giveaways' && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <GiveawaysEditor value={settings.giveaways ?? defaultGiveaways()} onChange={setGiveaways} />
-            </motion.div>
-          )}
-
-          {tab === 'music' && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <MusicEditor value={settings.music ?? defaultMusic()} onChange={setMusic} />
-            </motion.div>
-          )}
-
-          {tab === 'playlists' && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              <PlaylistsEditor value={settings.playlists ?? defaultPlaylists()} onChange={setPlaylists} />
+              <FiveMEditor value={settings.fivem ?? defaultFiveM()} onChange={setFiveM} />
             </motion.div>
           )}
 

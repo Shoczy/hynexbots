@@ -11,10 +11,10 @@ const { PermissionFlagsBits: P } = require('discord.js');
 const COMMON = ['ViewChannel', 'SendMessages', 'EmbedLinks', 'ReadMessageHistory', 'AttachFiles'];
 
 const PERMS_BY_TYPE = {
+  // Sold as "Security".
   moderation: [...COMMON, 'KickMembers', 'BanMembers', 'ModerateMembers', 'ManageMessages', 'ManageRoles', 'ManageNicknames', 'ViewAuditLog'],
-  tickets: [...COMMON, 'ManageChannels', 'ManageRoles', 'ManageMessages'],
-  economy: [...COMMON, 'ManageRoles', 'AddReactions'],
-  music: [...COMMON, 'Connect', 'Speak'],
+  // FiveM: ManageRoles for the whitelist role; the rest is messaging.
+  fivem: [...COMMON, 'ManageRoles'],
   // Bespoke builds: a broad (but non-Administrator) set covering all systems.
   custom: [...COMMON, 'ManageMessages', 'ManageRoles', 'ManageChannels', 'KickMembers', 'BanMembers', 'ModerateMembers', 'AddReactions', 'Connect', 'Speak'],
 };

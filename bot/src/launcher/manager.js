@@ -17,10 +17,8 @@ const store = require('../config-service/db');
 
 const PRODUCTS_DIR = path.join(__dirname, '..', '..', '..', 'products');
 const TYPE_DIR = {
-  moderation: 'moderation-bot',
-  tickets: 'tickets-bot',
-  economy: 'economy-bot',
-  music: 'music-bot',
+  moderation: 'moderation-bot', // sold as "Security"
+  fivem: 'fivem-bot',
 };
 
 const MAX_RESTARTS = 5;

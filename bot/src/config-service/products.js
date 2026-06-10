@@ -12,8 +12,8 @@
 
 const ALL_TABS = ['basics', 'modules', 'messages', 'commands']; // generic tabs (custom default)
 // Every valid tab id, including type-specific settings tabs — used to clamp overrides.
-const KNOWN_TABS = ['basics', 'modules', 'messages', 'commands', 'moderation', 'verification', 'reactionroles', 'antinuke', 'tickets', 'applications', 'faq', 'economy', 'giveaways', 'music', 'playlists', 'leveling'];
-const ALL_MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'economy', 'giveaways', 'music', 'playlists', 'tickets', 'applications', 'faq', 'leveling'];
+const KNOWN_TABS = ['basics', 'modules', 'messages', 'commands', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'fivem'];
+const ALL_MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'fivem'];
 
 // Which settings tab a module's deeper config lives under. `welcome` is edited in
 // the shared Messages tab; the rest each have a dedicated tab. Used to surface the
@@ -23,14 +23,8 @@ const MODULE_TABS = {
   verification: 'verification',
   reactionroles: 'reactionroles',
   antinuke: 'antinuke',
-  tickets: 'tickets',
-  applications: 'applications',
-  faq: 'faq',
-  economy: 'economy',
-  giveaways: 'giveaways',
-  music: 'music',
-  playlists: 'playlists',
   leveling: 'leveling',
+  fivem: 'fivem',
   welcome: 'messages',
 };
 
@@ -42,14 +36,8 @@ const COMMAND_GROUPS = [
   { id: 'moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode'] },
   { id: 'verification', commands: ['verify-panel'] },
   { id: 'reactionroles', commands: ['roles-panel'] },
-  { id: 'economy', commands: ['balance', 'daily', 'work', 'pay', 'shop', 'leaderboard', 'coinflip', 'slots'] },
-  { id: 'giveaways', commands: ['giveaway'] },
-  { id: 'music', commands: ['play', 'skip', 'stop', 'queue', 'volume', 'pause', 'resume', 'nowplaying', 'filter'] },
-  { id: 'playlists', commands: ['playlist'] },
-  { id: 'tickets', commands: ['ticket', 'close', 'add', 'remove'] },
-  { id: 'applications', commands: ['apply'] },
-  { id: 'faq', commands: ['faq'] },
   { id: 'leveling', commands: ['rank', 'levels', 'setxp'] },
+  { id: 'fivem', commands: ['status', 'players', 'whitelist', 'restart'] },
   { id: 'utility', commands: ['help', 'ping', 'serverinfo', 'userinfo', 'avatar'] },
 ];
 const ALL_GROUPS = COMMAND_GROUPS.map((g) => g.id);
@@ -60,33 +48,20 @@ const ALL_GROUPS = COMMAND_GROUPS.map((g) => g.id);
 // because there's nothing else to toggle — the bot IS that one system.
 // Multi-system bots are sold as `custom`, which unlocks everything.
 const TEMPLATES = {
-  // Sentinel is a full "server guardian": moderation + a verification gate +
-  // welcome/auto-roles (edited in the Messages tab). Multi-module, so it gets the
-  // Modules tab to toggle the extras on and off.
+  // The Security bot is a full "server guardian": moderation + a verification gate
+  // + anti-nuke + self-roles + welcome/auto-roles (edited in the Messages tab) +
+  // leveling. Multi-module, so it gets the Modules tab to toggle extras on and off.
   moderation: {
     tabs: ['basics', 'modules', 'moderation', 'verification', 'reactionroles', 'antinuke', 'messages', 'leveling', 'commands'],
     modules: ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling'],
     commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'utility'],
   },
-  // Concierge is a full support suite: tickets + application forms + an
-  // auto-answering FAQ + welcome onboarding.
-  tickets: {
-    tabs: ['basics', 'modules', 'tickets', 'applications', 'faq', 'messages', 'commands'],
-    modules: ['tickets', 'applications', 'faq', 'welcome'],
-    commandGroups: ['tickets', 'applications', 'faq', 'utility'],
-  },
-  // Vault is an engagement economy: economy + leveling + giveaways + welcome.
-  economy: {
-    tabs: ['basics', 'modules', 'economy', 'leveling', 'giveaways', 'messages', 'commands'],
-    modules: ['economy', 'leveling', 'giveaways', 'welcome'],
-    commandGroups: ['economy', 'leveling', 'giveaways', 'utility'],
-  },
-  // Resonance is a full audio experience: music + saved playlists + voice
-  // leveling + welcome onboarding.
-  music: {
-    tabs: ['basics', 'modules', 'music', 'playlists', 'leveling', 'messages', 'commands'],
-    modules: ['music', 'playlists', 'leveling', 'welcome'],
-    commandGroups: ['music', 'playlists', 'leveling', 'utility'],
+  // The FiveM bot: live server status, role whitelist, in-game reports and
+  // scheduled restart announcements, plus welcome onboarding.
+  fivem: {
+    tabs: ['basics', 'modules', 'fivem', 'messages', 'commands'],
+    modules: ['fivem', 'welcome'],
+    commandGroups: ['fivem', 'utility'],
   },
   // Bespoke builds get everything by default; narrow per-bot via `features`.
   custom: {

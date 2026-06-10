@@ -10,8 +10,9 @@ node_modules/
 !**/.env.example
 !**/.env.local.example
 
-# Bot runtime data (ticket counter, open tickets)
+# Bot runtime data (ticket counter, open tickets, product-bot local dbs)
 bot/data/
+products/*/data/
 
 # Next.js
 website/.next/

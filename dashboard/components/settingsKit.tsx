@@ -1,7 +1,7 @@
 'use client';
 
 // Shared building blocks for the per-product settings editors
-// (ModerationEditor, TicketsEditor, EconomyEditor, MusicEditor).
+// (ModerationEditor, AntiNukeEditor, FiveMEditor, …).
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { Toggle } from './ui';
 import { useGuild, type GuildRole } from '@/lib/guildContext';
