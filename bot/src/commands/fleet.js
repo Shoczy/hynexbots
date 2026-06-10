@@ -105,11 +105,17 @@ function buildFleetView({ nodeId = null, page = 0 } = {}) {
   const p = Math.min(Math.max(0, page | 0), totalPages - 1);
   const slice = bots.slice(p * PAGE_SIZE, p * PAGE_SIZE + PAGE_SIZE);
 
-  const lines = slice.map((b, i) => {
+  children.push(sep()); // divider between the node stats and its bots
+  slice.forEach((b, i) => {
+    if (i > 0) children.push(sep(false)); // thin divider between each bot
     const id = b.id != null ? b.id : p * PAGE_SIZE + i + 1;
-    return `${statusEmoji(b.status)} \`#${id}\` **${b.name}**`;
+    const meta = [];
+    if (typeof b.cpu === 'number') meta.push(`${b.cpu.toFixed(0)}%`);
+    if (typeof b.restarts === 'number') meta.push(`↻${b.restarts}`);
+    const tail = meta.length ? `  \`${meta.join(' · ')}\`` : '';
+    children.push(text(`${statusEmoji(b.status)} \`#${id}\`  **${b.name}**${tail}`));
   });
-  children.push(text(lines.join('\n')));
+  children.push(sep());
   children.push(text(`-# Page ${p + 1}/${totalPages} · ${bots.length} bot${bots.length === 1 ? '' : 's'}`));
 
   children.push(
