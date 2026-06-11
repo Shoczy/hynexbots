@@ -7,24 +7,26 @@ const { setHostedBots } = require('../fleet/hostedBots');
 const health = require('../config-service/health');
 
 /**
- * Build public profiles (name + avatar) for the hosted product bots so the
- * /status page can show which bots are live. Resolves each bot's Discord user
- * by its application id (cached by discord.js); falls back to the process name.
+ * Build public profiles (name + avatar + online) for every hosted product bot
+ * so the /status page can show which bots are live. Stopped bots stay listed
+ * with online:false (a red dot) instead of vanishing. Resolves each bot's
+ * Discord user by its application id (cached by discord.js).
  */
 async function refreshHostedBots(client) {
-  const recs = launcher.statusList();
+  const rows = store.listProcesses(); // all hosted bots, running or stopped
   const profiles = await Promise.all(
-    recs.map(async (r) => {
-      let name = r.name;
+    rows.map(async (row) => {
+      const appId = row.app_id;
+      let name = store.getBot(appId)?.name || appId;
       let avatar = null;
       try {
-        const user = await client.users.fetch(r.appId);
+        const user = await client.users.fetch(appId);
         name = user.username || name;
         avatar = user.displayAvatarURL({ size: 64, extension: 'png' });
       } catch {
-        /* keep the process name + no avatar */
+        /* keep the stored name + no avatar */
       }
-      return { id: r.appId, name, avatar, type: r.type, online: launcher.isRunning(r.appId) };
+      return { id: appId, name, avatar, type: row.type, online: launcher.isRunning(appId) };
     }),
   );
   setHostedBots(profiles);
@@ -105,5 +107,8 @@ module.exports = {
     setTimeout(() => refreshHostedBots(client).catch(() => {}), 8000);
     const hostedTimer = setInterval(() => refreshHostedBots(client).catch(() => {}), 60_000);
     if (hostedTimer.unref) hostedTimer.unref();
+    // Refresh immediately when a bot is started/stopped (e.g. from the dashboard)
+    // so /status flips to a red dot without waiting for the next sweep.
+    launcher.onChange(() => refreshHostedBots(client).catch(() => {}));
   },
 };

@@ -674,6 +674,11 @@ function listAutostart() {
   return db.prepare('SELECT * FROM bot_process WHERE autostart = 1').all().map(decryptRow);
 }
 
+/** Every hosted bot (running or stopped) — no token, for status display. */
+function listProcesses() {
+  return db.prepare('SELECT app_id, type, guild_id, autostart FROM bot_process').all();
+}
+
 /** One-time migration: encrypt any tokens still stored as plaintext. */
 function migrateProcessTokens() {
   const rows = db.prepare('SELECT app_id, token FROM bot_process').all();
@@ -897,6 +902,7 @@ module.exports = {
   setProcess,
   getProcess,
   listAutostart,
+  listProcesses,
   setAutostart,
   deleteProcess,
   registerBot,

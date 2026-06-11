@@ -242,7 +242,7 @@ export default function EditorPage() {
   return (
     <>
       <TopBar />
-      <main className="container-content py-10">
+      <main className="mx-auto w-full max-w-[1440px] px-6 py-10">
         <a href={withBase('/bots')} className="text-sm text-mist-muted transition-colors hover:text-mist">
           ← All bots
         </a>
@@ -462,7 +462,7 @@ export default function EditorPage() {
       {/* Sticky save bar — config tabs only (Team, License, Analytics & Logs are read-only). */}
       {tab !== 'team' && tab !== 'logs' && tab !== 'analytics' && tab !== 'license' && (
         <div className="sticky bottom-0 z-30 border-t border-ink-700/60 bg-ink-950/80 backdrop-blur-xl">
-          <div className="container-content flex items-center justify-between py-4">
+          <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between px-6 py-4">
             <p className="text-sm text-mist-muted">
               {saved ? (
                 <span className="text-emerald-300">✓ Saved — your bot will pick this up shortly.</span>

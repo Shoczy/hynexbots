@@ -33,6 +33,22 @@ function onCrash(fn) {
   crashNotifier = typeof fn === 'function' ? fn : null;
 }
 
+// Fired whenever a hosted bot starts or stops, so the /status snapshot can be
+// refreshed promptly instead of waiting for the periodic sweep.
+let changeNotifier = null;
+function onChange(fn) {
+  changeNotifier = typeof fn === 'function' ? fn : null;
+}
+function notifyChange() {
+  if (changeNotifier) {
+    try {
+      changeNotifier();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 /** Append output to a bot's rolling log buffer (one entry per line). */
 function pushLog(appId, chunk, level = 'out') {
   const buf = logBuffers.get(appId) || [];
@@ -171,6 +187,7 @@ async function launch({ appId, type, token, name, guildId, persist = true }) {
 
   if (persist) store.setProcess({ appId, type, token, guildId, autostart: true });
   spawnChild(appId, type, token, name);
+  notifyChange();
   return { ok: true, deployed };
 }
 
@@ -184,6 +201,7 @@ async function stop(appId) {
     /* already gone */
   }
   procs.delete(appId);
+  notifyChange();
   return true;
 }
 
@@ -244,4 +262,4 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-module.exports = { launch, stop, restart, relaunchAll, statusList, isManaged, isRunning, getLogs, onCrash };
+module.exports = { launch, stop, restart, relaunchAll, statusList, isManaged, isRunning, getLogs, onCrash, onChange };
