@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { doMute } = require('../lib/actions');
 const { err } = require('../lib/embeds');
 const { parseDuration } = require('./_helpers');
@@ -20,11 +20,11 @@ module.exports = {
     const member = interaction.options.getMember('user');
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const durationMs = parseDuration(interaction.options.getString('duration'));
-    if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], ephemeral: true });
+    if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], flags: MessageFlags.Ephemeral });
     if (member.id === interaction.user.id) {
-      return interaction.reply({ embeds: [err('You can\'t mute yourself.')], ephemeral: true });
+      return interaction.reply({ embeds: [err('You can\'t mute yourself.')], flags: MessageFlags.Ephemeral });
     }
     const res = await doMute(interaction.guild, member, { moderator: interaction.user, reason, durationMs });
-    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
+    return interaction.reply(res.ok ? (res.reply || { embeds: [res.embed] }) : { embeds: [res.embed], flags: MessageFlags.Ephemeral });
   },
 };

@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { err } = require('../lib/embeds');
 const whitelist = require('../lib/whitelist');
 
@@ -36,13 +36,13 @@ module.exports = {
 
     const user = interaction.options.getUser('member', true);
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-    if (!member) return interaction.reply({ embeds: [err('That member isn\'t in this server.')], ephemeral: true });
+    if (!member) return interaction.reply({ embeds: [err('That member isn\'t in this server.')], flags: MessageFlags.Ephemeral });
 
     const result =
       sub === 'add'
         ? await whitelist.add(interaction.guild, member, interaction.options.getString('identifier') || '', interaction.user)
         : await whitelist.remove(interaction.guild, member, interaction.user);
 
-    return interaction.reply({ embeds: [result.embed], ephemeral: !result.ok });
+    return interaction.reply({ embeds: [result.embed], flags: result.ok ? undefined : MessageFlags.Ephemeral });
   },
 };

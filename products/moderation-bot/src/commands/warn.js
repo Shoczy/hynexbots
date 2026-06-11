@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { doWarn } = require('../lib/actions');
 const { err } = require('../lib/embeds');
 
@@ -17,8 +17,8 @@ module.exports = {
   async execute(interaction) {
     const member = interaction.options.getMember('user');
     const reason = interaction.options.getString('reason') || 'No reason provided';
-    if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], ephemeral: true });
-    if (member.user.bot) return interaction.reply({ embeds: [err('You can\'t warn a bot.')], ephemeral: true });
+    if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], flags: MessageFlags.Ephemeral });
+    if (member.user.bot) return interaction.reply({ embeds: [err('You can\'t warn a bot.')], flags: MessageFlags.Ephemeral });
     const res = await doWarn(interaction.guild, member, { moderator: interaction.user, reason });
     return interaction.reply(res.reply || { embeds: [res.embed] });
   },

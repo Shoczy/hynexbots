@@ -1,6 +1,6 @@
 'use strict';
 
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 const { cfg } = require('../lib/state');
 const { brandColor, ok, err, v2 } = require('../lib/embeds');
 const { renderBlocks } = require('../lib/renderBlocks');
@@ -26,10 +26,11 @@ function panelPayload() {
     if (payload) return payload;
   }
 
+  // Fallback when no panel blocks are configured (the defaults normally seed two).
   return v2(
     [
-      `## ${v.title || 'Verify to continue'}`,
-      v.description || 'Click the button below to unlock the server.',
+      '## Verify to continue',
+      'Click the button below to unlock the server.',
       { separator: true },
       { row },
       '-# Hynex Bots',
@@ -41,19 +42,19 @@ function panelPayload() {
 /** Handle a click on the Verify button: grant the configured role. */
 async function handleVerifyButton(interaction) {
   if (!cfg('modules.verification', false)) {
-    return interaction.reply({ embeds: [err('Verification is currently disabled.')], ephemeral: true });
+    return interaction.reply({ embeds: [err('Verification is currently disabled.')], flags: MessageFlags.Ephemeral });
   }
   const roleId = cfg('verification.roleId', '');
   if (!roleId) {
     return interaction.reply({
       embeds: [err('No verified role is configured yet — ask an admin to set one in the dashboard.')],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   const member = interaction.member;
   if (member.roles.cache.has(roleId)) {
-    return interaction.reply({ embeds: [ok('You’re already verified. ✅')], ephemeral: true });
+    return interaction.reply({ embeds: [ok('You’re already verified. ✅')], flags: MessageFlags.Ephemeral });
   }
 
   try {
@@ -61,12 +62,12 @@ async function handleVerifyButton(interaction) {
   } catch {
     return interaction.reply({
       embeds: [err('I couldn’t assign the verified role — my role may sit below it, or I’m missing Manage Roles.')],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
   const msg = cfg('verification.successMessage', 'You’re verified — welcome aboard! 🎉');
-  return interaction.reply({ embeds: [ok(msg)], ephemeral: true });
+  return interaction.reply({ embeds: [ok(msg)], flags: MessageFlags.Ephemeral });
 }
 
 module.exports = { VERIFY_BUTTON_ID, panelPayload, handleVerifyButton };

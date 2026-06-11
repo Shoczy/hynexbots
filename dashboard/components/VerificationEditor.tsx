@@ -4,7 +4,7 @@ import { Card, TextField, ChannelField, RoleField } from './settingsKit';
 import { BlockBuilder } from './BlockBuilder';
 import { SendAction } from './SendAction';
 import { CHANNEL_TYPES } from '@/lib/guildContext';
-import { emptyV2Message, fromLegacy } from '@/lib/blocks';
+import { emptyV2Message } from '@/lib/blocks';
 import type { VerificationSettings } from '@/lib/settings';
 
 export function VerificationEditor({
@@ -22,11 +22,6 @@ export function VerificationEditor({
 }) {
   const set = (patch: Partial<VerificationSettings>) => onChange({ ...value, ...patch });
   const v2 = value.v2 ?? emptyV2Message();
-  // Block builder is the only panel-content editor. Seed it from the legacy
-  // title/description while it's empty so existing panels aren't lost.
-  const display = v2.blocks.length
-    ? v2
-    : fromLegacy({ enabled: true, accent: accent || '', title: value.title, description: value.description });
   const verifyButton = { label: value.buttonLabel || 'Verify', emoji: '✅', style: 'success' as const };
 
   return (
@@ -57,7 +52,7 @@ export function VerificationEditor({
 
       <Card title="Panel content" desc="The message members see before they verify. The Verify button is always added at the end.">
         <BlockBuilder
-          value={display}
+          value={v2}
           onChange={(next) => set({ v2: next })}
           botName={botName}
           accent={accent}

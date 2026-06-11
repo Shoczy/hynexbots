@@ -1,6 +1,6 @@
 'use strict';
 
-const { Events } = require('discord.js');
+const { Events, MessageFlags } = require('discord.js');
 const { authorize, DENY_MESSAGE } = require('../lib/perms');
 const { err } = require('../lib/embeds');
 
@@ -12,12 +12,12 @@ module.exports = {
     if (!command) return;
 
     if (!interaction.inGuild()) {
-      return interaction.reply({ embeds: [err('This bot only works inside a server.')], ephemeral: true });
+      return interaction.reply({ embeds: [err('This bot only works inside a server.')], flags: MessageFlags.Ephemeral });
     }
 
     const auth = authorize(command, interaction.member);
     if (!auth.ok) {
-      return interaction.reply({ embeds: [err(DENY_MESSAGE[auth.reason] || 'Not allowed.')], ephemeral: true });
+      return interaction.reply({ embeds: [err(DENY_MESSAGE[auth.reason] || 'Not allowed.')], flags: MessageFlags.Ephemeral });
     }
 
     client.cfg?.recordCommand(interaction.commandName);
@@ -26,7 +26,7 @@ module.exports = {
       await command.execute(interaction);
     } catch (e) {
       console.error(`Command /${interaction.commandName} failed:`, e);
-      const payload = { embeds: [err('Something went wrong running that command.')], ephemeral: true };
+      const payload = { embeds: [err('Something went wrong running that command.')], flags: MessageFlags.Ephemeral };
       if (interaction.deferred || interaction.replied) await interaction.followUp(payload).catch(() => {});
       else await interaction.reply(payload).catch(() => {});
     }

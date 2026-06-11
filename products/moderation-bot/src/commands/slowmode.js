@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { ok, err } = require('../lib/embeds');
 
 module.exports = {
@@ -21,7 +21,7 @@ module.exports = {
     } catch {
       return interaction.reply({
         embeds: [err('I couldn’t change slowmode here — check my Manage Channels permission.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
     const msg = seconds === 0 ? 'Slowmode disabled.' : `Slowmode set to **${seconds}s** per message.`;

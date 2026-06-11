@@ -10,6 +10,7 @@ process.env.HYNEX_DB_PATH = path.join(tmp, 'test.db');
 const test = require('node:test');
 const assert = require('node:assert');
 const store = require('../src/config-service/db');
+const { mergeSettings } = store;
 const { sanitizeSettings } = require('../src/config-service/validate');
 const { resolveFeatures, featuresFromModules } = require('../src/config-service/products');
 const { sanitizePermissions } = require('../src/config-service/permissions');
@@ -171,15 +172,28 @@ test('sanitizeAntiNuke clamps limits and validates punishment', () => {
   assert.deepEqual(a.whitelistUserIds, ['709393455519891486'], 'invalid ids dropped');
 });
 
-test('sanitizeVerification keeps valid ids and falls back on empty text', () => {
+test('sanitizeVerification keeps valid ids, button label and a block list', () => {
   const saved = sanitizeSettings({
-    verification: { channelId: '123456789012345678', roleId: 'nope', title: '', buttonLabel: 'Unlock' },
+    verification: { channelId: '123456789012345678', roleId: 'nope', buttonLabel: 'Unlock' },
   });
   const v = saved.verification;
   assert.equal(v.channelId, '123456789012345678', 'valid snowflake kept');
   assert.equal(v.roleId, '', 'invalid role id dropped');
-  assert.ok(v.title.length > 0, 'empty title falls back to default');
   assert.equal(v.buttonLabel, 'Unlock', 'custom button label kept');
+  assert.ok(Array.isArray(v.v2.blocks), 'panel content is a block list');
+  assert.ok(!('title' in v), 'legacy title field removed from the schema');
+});
+
+test('migrateLegacy converts an old text+embed welcome into blocks', () => {
+  const merged = mergeSettings({
+    messages: { welcome: { enabled: true, channelId: '1', text: 'Hi {user}', embed: { enabled: true, title: 'Welcome', description: 'to {server}' } } },
+    verification: { title: 'Prove it', description: 'click below' },
+  });
+  const w = merged.messages.welcome;
+  assert.ok(!('text' in w) && !('embed' in w), 'legacy welcome fields dropped');
+  assert.deepEqual(w.v2.blocks.map((b) => b.type), ['text', 'text', 'text'], 'text + embed title/description become text blocks');
+  assert.equal(w.v2.blocks[0].content, 'Hi {user}');
+  assert.equal(merged.verification.v2.blocks[0].content, '## Prove it', 'verification title migrated to a heading block');
 });
 
 test('fivem product exposes its own scope', () => {

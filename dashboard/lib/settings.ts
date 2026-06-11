@@ -14,9 +14,7 @@ export type Embed = {
 export type MessageBlock = {
   enabled: boolean;
   channelId: string;
-  text: string;
-  embed: Embed;
-  /** Optional Components V2 body designed in the block builder (overrides text+embed). */
+  /** The message body, designed in the block builder. */
   v2?: V2Message;
 };
 
@@ -111,11 +109,9 @@ export type ModerationSettings = {
 export type VerificationSettings = {
   channelId: string;
   roleId: string;
-  title: string;
-  description: string;
   buttonLabel: string;
   successMessage: string;
-  /** Optional Components V2 panel content (the Verify button is always appended). */
+  /** Panel content, designed in the block builder (the Verify button is appended). */
   v2?: V2Message;
 };
 
@@ -239,11 +235,16 @@ export function defaultVerification(): VerificationSettings {
   return {
     channelId: '',
     roleId: '',
-    title: 'Verify to continue',
-    description: 'Click the button below to confirm you’re human and unlock the server.',
     buttonLabel: 'Verify',
     successMessage: 'You’re verified — welcome aboard! 🎉',
-    v2: emptyV2Message(),
+    v2: {
+      enabled: false,
+      accent: '',
+      blocks: [
+        { id: 'verify-title', type: 'text', content: '## Verify to continue' },
+        { id: 'verify-desc', type: 'text', content: 'Click the button below to confirm you’re human and unlock the server.' },
+      ],
+    },
   };
 }
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { info } = require('../lib/embeds');
 const { cfg } = require('../lib/state');
 
@@ -26,6 +26,6 @@ module.exports = {
     const e = info('🎮 FiveM Bot — Commands')
       .addFields(fields)
       .setFooter({ text: 'Configure everything in your Hynex dashboard.' });
-    return interaction.reply({ embeds: [e], ephemeral: true });
+    return interaction.reply({ embeds: [e], flags: MessageFlags.Ephemeral });
   },
 };

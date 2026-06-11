@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { info } = require('../lib/embeds');
 const { listWarnings } = require('../lib/actions');
 
@@ -28,6 +28,6 @@ module.exports = {
         { name: 'Active warnings', value: String(warns), inline: true },
       );
     }
-    return interaction.reply({ embeds: [e], ephemeral: true });
+    return interaction.reply({ embeds: [e], flags: MessageFlags.Ephemeral });
   },
 };

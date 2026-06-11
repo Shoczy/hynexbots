@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { fivem } = require('../lib/state');
 const { err, ok } = require('../lib/embeds');
 const restartScheduler = require('../fivem/restartScheduler');
@@ -20,9 +20,9 @@ module.exports = {
     const rs = fivem().restarts;
     const channelId = rs.channelId;
     if (!channelId) {
-      return interaction.reply({ embeds: [err('No announcement channel is set. Pick one in your dashboard → FiveM → Restart announcements.')], ephemeral: true });
+      return interaction.reply({ embeds: [err('No announcement channel is set. Pick one in your dashboard → FiveM → Restart announcements.')], flags: MessageFlags.Ephemeral });
     }
     await restartScheduler.manualAnnounce(interaction.options.getInteger('minutes') || 0);
-    return interaction.reply({ embeds: [ok('Restart announcement posted.')], ephemeral: true });
+    return interaction.reply({ embeds: [ok('Restart announcement posted.')], flags: MessageFlags.Ephemeral });
   },
 };

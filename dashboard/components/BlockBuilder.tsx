@@ -4,6 +4,7 @@
 // / link-button blocks inside one accent container. Used wherever a customer
 // designs a posted message (command replies, welcome/goodbye, panels).
 
+import { useState } from 'react';
 import { Toggle } from './ui';
 import { V2Preview, type PreviewButton } from './V2Preview';
 import { newBlock, blockId, type V2Message, type V2Block, type V2Button } from '@/lib/blocks';
@@ -38,16 +39,18 @@ export function BlockBuilder({
   toggleHint?: string;
 }) {
   const blocks = value.blocks;
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const setBlocks = (next: V2Block[]) => onChange({ ...value, blocks: next });
   const patch = (id: string, p: Partial<V2Block>) =>
     setBlocks(blocks.map((b) => (b.id === id ? ({ ...b, ...p } as V2Block) : b)));
   const remove = (id: string) => setBlocks(blocks.filter((b) => b.id !== id));
   const add = (type: Parameters<typeof newBlock>[0]) => setBlocks([...blocks, newBlock(type)]);
-  const move = (idx: number, dir: -1 | 1) => {
-    const j = idx + dir;
-    if (j < 0 || j >= blocks.length) return;
+  const move = (idx: number, dir: -1 | 1) => reorder(idx, idx + dir);
+  const reorder = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= blocks.length || to >= blocks.length) return;
     const next = blocks.slice();
-    [next[idx], next[j]] = [next[j], next[idx]];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
     setBlocks(next);
   };
 
@@ -75,9 +78,17 @@ export function BlockBuilder({
               index={idx}
               count={blocks.length}
               variables={variables}
+              dragging={dragIndex === idx}
               onPatch={(p) => patch(block.id, p)}
               onRemove={() => remove(block.id)}
               onMove={(dir) => move(idx, dir)}
+              onDragStart={() => setDragIndex(idx)}
+              onDragOver={(ev) => ev.preventDefault()}
+              onDrop={() => {
+                if (dragIndex !== null) reorder(dragIndex, idx);
+                setDragIndex(null);
+              }}
+              onDragEnd={() => setDragIndex(null)}
             />
           ))}
 
@@ -132,24 +143,48 @@ function BlockCard({
   index,
   count,
   variables,
+  dragging,
   onPatch,
   onRemove,
   onMove,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   block: V2Block;
   index: number;
   count: number;
   variables: string[];
+  dragging: boolean;
   onPatch: (p: Partial<V2Block>) => void;
   onRemove: () => void;
   onMove: (dir: -1 | 1) => void;
+  onDragStart: () => void;
+  onDragOver: (ev: React.DragEvent) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-ink-700 bg-ink-900/40 p-3">
+    <div
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className={`rounded-xl border bg-ink-900/40 p-3 transition-colors ${dragging ? 'border-accent/60 opacity-60' : 'border-ink-700'}`}
+    >
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-medium uppercase tracking-wide text-mist-faint">
-          {BLOCK_LABEL[block.type]}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span
+            draggable
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            className="cursor-grab select-none px-1 text-mist-faint hover:text-mist active:cursor-grabbing"
+            title="Drag to reorder"
+            aria-label="Drag to reorder"
+          >
+            ⠿
+          </span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-mist-faint">{BLOCK_LABEL[block.type]}</span>
+        </div>
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => onMove(-1)} disabled={index === 0} className="rounded px-1.5 py-0.5 text-mist-faint hover:text-mist disabled:opacity-30" title="Move up">
             ↑

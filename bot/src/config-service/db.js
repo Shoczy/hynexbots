@@ -264,11 +264,18 @@ function verificationDefaults() {
   return {
     channelId: '', // where the verification panel is posted
     roleId: '', // role granted when a member verifies
-    title: 'Verify to continue',
-    description: 'Click the button below to confirm you’re human and unlock the server.',
     buttonLabel: 'Verify',
     successMessage: 'You’re verified — welcome aboard! 🎉',
-    v2: v2Default(), // optional custom panel content (block builder)
+    // Panel content (block builder). Seeded with sensible defaults; the Verify
+    // button is appended by the bot.
+    v2: {
+      enabled: false,
+      accent: '',
+      blocks: [
+        { id: 'verify-title', type: 'text', content: '## Verify to continue' },
+        { id: 'verify-desc', type: 'text', content: 'Click the button below to confirm you’re human and unlock the server.' },
+      ],
+    },
   };
 }
 
@@ -358,9 +365,7 @@ function messageBlock() {
   return {
     enabled: false,
     channelId: '',
-    text: '',
-    embed: { enabled: false, title: '', description: '', color: '#6366f1', image: '', footer: '' },
-    v2: v2Default(), // optional block-builder body (used instead of text+embed when enabled)
+    v2: v2Default(), // the message body, designed in the dashboard block builder
   };
 }
 
@@ -384,11 +389,59 @@ function mergeValue(def, val) {
   return typeof val === typeof def ? val : def;
 }
 
+/** Convert a legacy text+embed message block into block-builder blocks. */
+function legacyMessageBlocks(b) {
+  const blocks = [];
+  const push = (c) => c && String(c).trim() && blocks.push({ id: crypto.randomUUID(), type: 'text', content: String(c) });
+  if (b && b.text) push(b.text);
+  const e = b && b.embed;
+  if (e && e.enabled) {
+    if (e.title) push(`## ${e.title}`);
+    if (e.description) push(e.description);
+    if (e.image) blocks.push({ id: crypto.randomUUID(), type: 'image', url: String(e.image) });
+    if (e.footer) push(`-# ${e.footer}`);
+  }
+  return blocks;
+}
+
+/**
+ * One-way migration of the old single-embed shape into the block-builder model,
+ * applied at load time (before merge) so configs saved with the legacy editor
+ * keep rendering after the legacy fields were dropped from the schema. Only fills
+ * `v2.blocks` when empty — never overwrites blocks the customer already designed.
+ */
+function migrateLegacy(stored) {
+  if (!stored || typeof stored !== 'object') return stored;
+  const out = { ...stored };
+  const seed = (obj, blocks) => {
+    const v2 = obj.v2 && typeof obj.v2 === 'object' ? obj.v2 : {};
+    if (Array.isArray(v2.blocks) && v2.blocks.length) return obj; // already has blocks
+    if (!blocks.length) return obj;
+    return { ...obj, v2: { enabled: Boolean(v2.enabled), accent: v2.accent || '', blocks } };
+  };
+
+  if (stored.messages && typeof stored.messages === 'object') {
+    const m = stored.messages;
+    out.messages = { ...m };
+    if (m.welcome && typeof m.welcome === 'object') out.messages.welcome = seed(m.welcome, legacyMessageBlocks(m.welcome));
+    if (m.leave && typeof m.leave === 'object') out.messages.leave = seed(m.leave, legacyMessageBlocks(m.leave));
+  }
+  if (stored.verification && typeof stored.verification === 'object') {
+    const v = stored.verification;
+    const blocks = [];
+    if (v.title) blocks.push({ id: crypto.randomUUID(), type: 'text', content: `## ${v.title}` });
+    if (v.description) blocks.push({ id: crypto.randomUUID(), type: 'text', content: String(v.description) });
+    out.verification = seed(v, blocks);
+  }
+  return out;
+}
+
 function mergeSettings(stored) {
   const base = defaultSettings();
-  if (!stored || typeof stored !== 'object') return base;
+  const migrated = migrateLegacy(stored);
+  if (!migrated || typeof migrated !== 'object') return base;
   const out = {};
-  for (const k of Object.keys(base)) out[k] = mergeValue(base[k], stored[k]);
+  for (const k of Object.keys(base)) out[k] = mergeValue(base[k], migrated[k]);
   return out;
 }
 

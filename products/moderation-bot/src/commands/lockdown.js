@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { doLockdown } = require('../lib/actions');
 
 module.exports = {
@@ -15,6 +15,6 @@ module.exports = {
   async execute(interaction) {
     const unlock = interaction.options.getBoolean('unlock');
     const res = await doLockdown(interaction.channel, { lock: !unlock, moderator: interaction.user });
-    return interaction.reply({ embeds: [res.embed], ephemeral: !res.ok });
+    return interaction.reply({ embeds: [res.embed], flags: res.ok ? undefined : MessageFlags.Ephemeral });
   },
 };

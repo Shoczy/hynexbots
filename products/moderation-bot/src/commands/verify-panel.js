@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } = require('discord.js');
 const { cfg } = require('../lib/state');
 const { panelPayload } = require('../verification');
 const { ok, err, warn } = require('../lib/embeds');
@@ -23,7 +23,7 @@ module.exports = {
     if (!cfg('modules.verification', false)) {
       return interaction.reply({
         embeds: [warn('The Verification module is turned off — enable it in the dashboard first.')],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
@@ -34,7 +34,7 @@ module.exports = {
       interaction.channel;
 
     if (!target?.isTextBased?.()) {
-      return interaction.reply({ embeds: [err('That channel can’t receive messages.')], ephemeral: true });
+      return interaction.reply({ embeds: [err('That channel can’t receive messages.')], flags: MessageFlags.Ephemeral });
     }
 
     try {
@@ -42,10 +42,10 @@ module.exports = {
     } catch {
       return interaction.reply({
         embeds: [err(`I couldn’t post in ${target} — check my permissions there.`)],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
     }
 
-    return interaction.reply({ embeds: [ok(`Verification panel posted in ${target}.`)], ephemeral: true });
+    return interaction.reply({ embeds: [ok(`Verification panel posted in ${target}.`)], flags: MessageFlags.Ephemeral });
   },
 };

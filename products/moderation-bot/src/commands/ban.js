@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { doBan } = require('../lib/actions');
 const { err } = require('../lib/embeds');
 
@@ -22,9 +22,9 @@ module.exports = {
     const reason = interaction.options.getString('reason') || 'No reason provided';
     const deleteDays = interaction.options.getInteger('delete_days') || 0;
     if (user.id === interaction.user.id) {
-      return interaction.reply({ embeds: [err('You can\'t ban yourself.')], ephemeral: true });
+      return interaction.reply({ embeds: [err('You can\'t ban yourself.')], flags: MessageFlags.Ephemeral });
     }
     const res = await doBan(interaction.guild, user, { moderator: interaction.user, reason, deleteDays });
-    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
+    return interaction.reply(res.ok ? (res.reply || { embeds: [res.embed] }) : { embeds: [res.embed], flags: MessageFlags.Ephemeral });
   },
 };

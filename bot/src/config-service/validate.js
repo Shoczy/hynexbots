@@ -74,19 +74,9 @@ function sanitizeBlocks(v) {
 /** Sanitize one welcome/leave message block. */
 function sanitizeMessageBlock(m, def) {
   const b = m || {};
-  const e = b.embed || {};
   return {
     enabled: Boolean(b.enabled),
     channelId: isSnowflake(b.channelId) ? b.channelId : '',
-    text: str(b.text, 2000, ''),
-    embed: {
-      enabled: Boolean(e.enabled),
-      title: str(e.title, 256, ''),
-      description: str(e.description, 4000, ''),
-      color: isHex(e.color) ? e.color : def.embed.color,
-      image: url(e.image),
-      footer: str(e.footer, 2048, ''),
-    },
     v2: sanitizeBlocks(b.v2),
   };
 }
@@ -217,8 +207,6 @@ function sanitizeVerification(v, def) {
   return {
     channelId: snowflake(i.channelId),
     roleId: snowflake(i.roleId),
-    title: str(i.title, 256, def.title) || def.title,
-    description: str(i.description, 2000, def.description) || def.description,
     buttonLabel: str(i.buttonLabel, 80, def.buttonLabel) || def.buttonLabel,
     successMessage: str(i.successMessage, 1000, def.successMessage) || def.successMessage,
     v2: sanitizeBlocks(i.v2),

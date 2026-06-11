@@ -5,7 +5,7 @@ import { Field, Toggle } from './ui';
 import { Card, RolesField } from './settingsKit';
 import { BlockBuilder } from './BlockBuilder';
 import { SendAction } from './SendAction';
-import { emptyV2Message, fromLegacy } from '@/lib/blocks';
+import { emptyV2Message } from '@/lib/blocks';
 import { MATCH_MODES, VARIABLES, type Settings, type MessageBlock, type AutoResponse } from '@/lib/settings';
 
 // Bare variable names (no braces) for the block builder's insert chips.
@@ -112,20 +112,6 @@ function BlockEditor({
 }) {
   const set = (patch: Partial<MessageBlock>) => onChange({ ...block, ...patch });
   const v2 = block.v2 ?? emptyV2Message();
-  // The block builder is the only body editor. If it's still empty, seed the
-  // preview/editor from any legacy text+embed so old content isn't lost — it's
-  // persisted as blocks the moment the customer edits anything.
-  const display = v2.blocks.length
-    ? v2
-    : fromLegacy({
-        enabled: true,
-        accent: block.embed.color,
-        text: block.text,
-        title: block.embed.enabled ? block.embed.title : '',
-        description: block.embed.enabled ? block.embed.description : '',
-        image: block.embed.enabled ? block.embed.image : '',
-        footer: block.embed.enabled ? block.embed.footer : '',
-      });
 
   return (
     <section className="card p-6">
@@ -149,7 +135,7 @@ function BlockEditor({
           </Field>
 
           {/* Components V2 block builder — stack text / separators / images / link buttons. */}
-          <BlockBuilder value={display} onChange={(next) => set({ v2: next })} botName={botName} variables={VAR_TOKENS} />
+          <BlockBuilder value={v2} onChange={(next) => set({ v2: next })} botName={botName} variables={VAR_TOKENS} />
         </div>
       )}
 

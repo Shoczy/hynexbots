@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { listWarnings, clearWarnings } = require('../lib/actions');
 const { info, ok } = require('../lib/embeds');
 
@@ -25,7 +25,7 @@ module.exports = {
 
     const list = listWarnings(interaction.guild, user.id);
     if (!list.length) {
-      return interaction.reply({ embeds: [info('Warnings', `**${user.tag}** has no active warnings.`)], ephemeral: true });
+      return interaction.reply({ embeds: [info('Warnings', `**${user.tag}** has no active warnings.`)], flags: MessageFlags.Ephemeral });
     }
     const lines = list
       .slice(0, 15)
@@ -33,7 +33,7 @@ module.exports = {
       .join('\n');
     return interaction.reply({
       embeds: [info(`Warnings — ${user.tag} (${list.length})`, lines)],
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 };

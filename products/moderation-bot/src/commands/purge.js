@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { doPurge } = require('../lib/actions');
 const { ok, err } = require('../lib/embeds');
 
@@ -19,7 +19,7 @@ module.exports = {
   async execute(interaction) {
     const amount = interaction.options.getInteger('amount');
     const user = interaction.options.getUser('user');
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const res = await doPurge(interaction.channel, amount, { filterUserId: user?.id });
     if (!res.ok) return interaction.editReply({ embeds: [err('Failed to purge — messages may be older than 14 days.')] });
     return interaction.editReply({ embeds: [ok(`🧹 Deleted **${res.count}** message(s).`)] });

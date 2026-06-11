@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { info } = require('../lib/embeds');
 
 module.exports = {
@@ -8,7 +8,7 @@ module.exports = {
   data: new SlashCommandBuilder().setName('ping').setDescription('Check the bot\'s latency.'),
 
   async execute(interaction) {
-    const sent = await interaction.reply({ content: 'Pinging…', fetchReply: true, ephemeral: true });
+    const sent = await interaction.reply({ content: 'Pinging…', fetchReply: true, flags: MessageFlags.Ephemeral });
     const rtt = sent.createdTimestamp - interaction.createdTimestamp;
     return interaction.editReply({
       content: null,

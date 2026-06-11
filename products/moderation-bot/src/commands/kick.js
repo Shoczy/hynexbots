@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 const { doKick } = require('../lib/actions');
 const { err } = require('../lib/embeds');
 
@@ -17,11 +17,11 @@ module.exports = {
   async execute(interaction) {
     const member = interaction.options.getMember('user');
     const reason = interaction.options.getString('reason') || 'No reason provided';
-    if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], ephemeral: true });
+    if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], flags: MessageFlags.Ephemeral });
     if (member.id === interaction.user.id) {
-      return interaction.reply({ embeds: [err('You can\'t kick yourself.')], ephemeral: true });
+      return interaction.reply({ embeds: [err('You can\'t kick yourself.')], flags: MessageFlags.Ephemeral });
     }
     const res = await doKick(interaction.guild, member, { moderator: interaction.user, reason });
-    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
+    return interaction.reply(res.ok ? (res.reply || { embeds: [res.embed] }) : { embeds: [res.embed], flags: MessageFlags.Ephemeral });
   },
 };
