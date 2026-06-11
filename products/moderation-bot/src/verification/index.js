@@ -21,8 +21,8 @@ function panelPayload() {
 
   // Custom panel content from the block builder — the functional verify button
   // is always appended after the customer's blocks.
-  if (v.v2?.enabled) {
-    const payload = renderBlocks(v.v2, {}, [{ separator: true }, { row }, '-# Hynex Bots']);
+  if (v.v2 && Array.isArray(v.v2.blocks) && v.v2.blocks.length) {
+    const payload = renderBlocks({ ...v.v2, enabled: true }, {}, [{ separator: true }, { row }, '-# Hynex Bots']);
     if (payload) return payload;
   }
 

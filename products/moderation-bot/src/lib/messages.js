@@ -43,11 +43,10 @@ function hexToInt(hex) {
 function buildMessagePayload(block, member) {
   if (!block || !block.enabled) return null;
 
-  // Block builder wins when the customer designed a custom V2 body.
-  if (block.v2?.enabled) {
-    const payload = renderBlocks(block.v2, memberVars(member));
+  // Block builder wins whenever the customer placed any blocks.
+  if (block.v2 && Array.isArray(block.v2.blocks) && block.v2.blocks.length) {
+    const payload = renderBlocks({ ...block.v2, enabled: true }, memberVars(member));
     if (payload) return payload;
-    // enabled-but-empty → fall through to the legacy text/embed body
   }
 
   const text = block.text ? applyVars(block.text, member) : '';
