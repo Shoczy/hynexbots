@@ -290,11 +290,22 @@ function moderationDefaults() {
       massMention: { enabled: false, threshold: 5 },
       capsFilter: { enabled: false, percent: 70 },
       bannedWords: { enabled: false, words: [] },
+      scamLinks: { enabled: false, extraDomains: [] }, // bundled phishing blocklist + custom domains
     },
     antiRaid: {
       enabled: false,
       minAccountAgeDays: 0, // 0 = no gate
       joinRate: { enabled: false, joins: 10, perSeconds: 10 },
+    },
+    // Auto-slowmode: enable Discord slowmode in a channel when it spikes, lift it
+    // once the channel calms down.
+    autoSlowmode: {
+      enabled: false,
+      messages: 20, // trip when this many messages arrive…
+      perSeconds: 10, // …within this window
+      slowmodeSeconds: 5, // slowmode rate to apply
+      cooldownSeconds: 60, // keep it on for this long, then restore the previous rate
+      channelIds: [], // empty = every text channel
     },
     warnings: {
       expireDays: 0, // 0 = never expire

@@ -4,9 +4,28 @@ const { mod } = require('../lib/state');
 const { isMod } = require('../lib/perms');
 const { logModAction } = require('../lib/log');
 const { info } = require('../lib/embeds');
+const { SCAM_DOMAINS } = require('./scamDomains');
 
 const INVITE_RE = /(discord\.(gg|io|me|li)|discordapp\.com\/invite|discord\.com\/invite)\/\S+/i;
 const LINK_RE = /https?:\/\/\S+/i;
+const URL_RE = /https?:\/\/([^\s/]+)/gi;
+
+/** Lowercased hosts of every URL in the text. */
+function hostsIn(content) {
+  const hosts = [];
+  let m;
+  URL_RE.lastIndex = 0;
+  while ((m = URL_RE.exec(content))) hosts.push(m[1].toLowerCase());
+  return hosts;
+}
+
+/** Does any URL host match a known-scam token or a customer-added domain? */
+function isScamLink(content, extra = []) {
+  const hosts = hostsIn(content);
+  if (!hosts.length) return false;
+  const needles = [...SCAM_DOMAINS, ...extra.map((d) => String(d).toLowerCase())];
+  return hosts.some((host) => needles.some((d) => d && host.includes(d)));
+}
 
 // Per-user rolling message timestamps for spam detection: key = `${guild}:${user}`.
 const spamHits = new Map();
@@ -26,6 +45,11 @@ async function handleMessage(message) {
     if (am.bannedWords.words.some((w) => w && lower.includes(w))) {
       return act(message, 'Blocked word');
     }
+  }
+
+  // ── Scam / phishing links ──
+  if (am.scamLinks?.enabled && isScamLink(content, am.scamLinks.extraDomains)) {
+    return act(message, 'Scam / phishing link');
   }
 
   // ── Invite links ──

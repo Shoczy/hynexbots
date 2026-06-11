@@ -83,11 +83,20 @@ export type ModerationSettings = {
     massMention: { enabled: boolean; threshold: number };
     capsFilter: { enabled: boolean; percent: number };
     bannedWords: { enabled: boolean; words: string[] };
+    scamLinks: { enabled: boolean; extraDomains: string[] };
   };
   antiRaid: {
     enabled: boolean;
     minAccountAgeDays: number;
     joinRate: { enabled: boolean; joins: number; perSeconds: number };
+  };
+  autoSlowmode: {
+    enabled: boolean;
+    messages: number;
+    perSeconds: number;
+    slowmodeSeconds: number;
+    cooldownSeconds: number;
+    channelIds: string[];
   };
   warnings: { expireDays: number; escalations: WarnEscalation[] };
   logging: {
@@ -202,8 +211,10 @@ export function defaultModeration(): ModerationSettings {
       massMention: { enabled: false, threshold: 5 },
       capsFilter: { enabled: false, percent: 70 },
       bannedWords: { enabled: false, words: [] },
+      scamLinks: { enabled: false, extraDomains: [] },
     },
     antiRaid: { enabled: false, minAccountAgeDays: 0, joinRate: { enabled: false, joins: 10, perSeconds: 10 } },
+    autoSlowmode: { enabled: false, messages: 20, perSeconds: 10, slowmodeSeconds: 5, cooldownSeconds: 60, channelIds: [] },
     warnings: { expireDays: 0, escalations: [] },
     logging: {
       channelId: '',

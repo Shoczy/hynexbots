@@ -135,6 +135,22 @@ function sanitizeModeration(m, def) {
       )
     : [];
 
+  // Customer-added scam domains: lowercase host only (strip scheme/path), deduped.
+  const scamDomains = Array.isArray(am.scamLinks?.extraDomains)
+    ? [
+        ...new Set(
+          am.scamLinks.extraDomains
+            .map((d) => str(d, 100, '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''))
+            .filter(Boolean),
+        ),
+      ].slice(0, 100)
+    : [];
+
+  const as = i.autoSlowmode || {};
+  const slowChannels = Array.isArray(as.channelIds)
+    ? [...new Set(as.channelIds.filter((c) => /^\d{1,20}$/.test(String(c))).map(String))].slice(0, 50)
+    : [];
+
   const escalations = Array.isArray(wn.escalations)
     ? wn.escalations
         .filter((e) => e && typeof e === 'object')
@@ -165,6 +181,7 @@ function sanitizeModeration(m, def) {
         percent: int(am.capsFilter?.percent, 1, 100, def.automod.capsFilter.percent),
       },
       bannedWords: { enabled: Boolean(am.bannedWords?.enabled), words: bannedWords },
+      scamLinks: { enabled: Boolean(am.scamLinks?.enabled), extraDomains: scamDomains },
     },
     antiRaid: {
       enabled: Boolean(ar.enabled),
@@ -198,6 +215,14 @@ function sanitizeModeration(m, def) {
         : [],
     },
     dmOnPunish: Boolean(i.dmOnPunish),
+    autoSlowmode: {
+      enabled: Boolean(as.enabled),
+      messages: int(as.messages, 2, 500, def.autoSlowmode.messages),
+      perSeconds: int(as.perSeconds, 1, 300, def.autoSlowmode.perSeconds),
+      slowmodeSeconds: int(as.slowmodeSeconds, 1, 21600, def.autoSlowmode.slowmodeSeconds),
+      cooldownSeconds: int(as.cooldownSeconds, 5, 3600, def.autoSlowmode.cooldownSeconds),
+      channelIds: slowChannels,
+    },
   };
 }
 

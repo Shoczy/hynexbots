@@ -23,8 +23,10 @@ export function ModerationEditor({
   const wn = value.warnings;
   const lg = value.logging;
   const rl = value.roles;
+  const asm = value.autoSlowmode;
 
   const setAutomod = (patch: Partial<ModerationSettings['automod']>) => onChange({ ...value, automod: { ...am, ...patch } });
+  const setAutoSlowmode = (patch: Partial<ModerationSettings['autoSlowmode']>) => onChange({ ...value, autoSlowmode: { ...asm, ...patch } });
   const setAntiRaid = (patch: Partial<ModerationSettings['antiRaid']>) => onChange({ ...value, antiRaid: { ...ar, ...patch } });
   const setWarnings = (patch: Partial<ModerationSettings['warnings']>) => onChange({ ...value, warnings: { ...wn, ...patch } });
   const setLogging = (patch: Partial<ModerationSettings['logging']>) => onChange({ ...value, logging: { ...lg, ...patch } });
@@ -91,8 +93,45 @@ export function ModerationEditor({
                 validate={(s) => s.length > 0 && s.length <= 100}
               />
             </Row>
+            <Row
+              label="Scam & phishing links"
+              hint="Delete known fake-Nitro / account-steal links. A built-in blocklist runs automatically — add your own domains below."
+              checked={am.scamLinks.enabled}
+              onChange={(v) => setAutomod({ scamLinks: { ...am.scamLinks, enabled: v } })}
+            >
+              <ChipInput
+                items={am.scamLinks.extraDomains}
+                onChange={(extraDomains) => setAutomod({ scamLinks: { ...am.scamLinks, extraDomains } })}
+                placeholder="extra domain, e.g. bad-site.com"
+                transform={(s) => s.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '')}
+                validate={(s) => s.length > 0 && s.length <= 100}
+              />
+            </Row>
           </>
         )}
+      </Card>
+
+      {/* Auto-slowmode */}
+      <Card title="Auto-Slowmode" desc="Automatically slow a channel down when it gets flooded, then lift it once it calms.">
+        <Row label="Enable auto-slowmode" checked={asm.enabled} onChange={(v) => setAutoSlowmode({ enabled: v })}>
+          <div className="space-y-3 text-sm text-mist-muted">
+            <div className="flex flex-wrap items-center gap-2">
+              <span>Trip at</span>
+              <NumInput value={asm.messages} min={2} max={500} onChange={(n) => setAutoSlowmode({ messages: n })} />
+              <span>messages per</span>
+              <NumInput value={asm.perSeconds} min={1} max={300} onChange={(n) => setAutoSlowmode({ perSeconds: n })} />
+              <span>seconds</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span>Set slowmode to</span>
+              <NumInput value={asm.slowmodeSeconds} min={1} max={21600} onChange={(n) => setAutoSlowmode({ slowmodeSeconds: n })} />
+              <span>s, lift after</span>
+              <NumInput value={asm.cooldownSeconds} min={5} max={3600} onChange={(n) => setAutoSlowmode({ cooldownSeconds: n })} />
+              <span>s of calm</span>
+            </div>
+            <p className="text-xs text-mist-faint">Applies to every text channel. The channel&apos;s previous slowmode is restored afterwards.</p>
+          </div>
+        </Row>
       </Card>
 
       {/* Anti-raid */}
