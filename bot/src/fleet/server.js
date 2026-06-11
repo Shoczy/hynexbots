@@ -1,6 +1,7 @@
 const express = require('express');
 const config = require('../config');
 const fleetStore = require('./store');
+const { hostedBots } = require('./hostedBots');
 const { mountConfigRoutes } = require('../config-service/routes');
 const { rateLimit } = require('../config-service/rateLimit');
 
@@ -66,6 +67,9 @@ function startFleetServer() {
       bots: { total: bots.length, online: botsOnline },
       uptimePct,
       list,
+      // The Discord product bots this platform hosts (name + avatar + app id),
+      // resolved by the main bot — shown when a node is expanded on /status.
+      hostedBots: hostedBots(),
       incidents: fleetStore.recentIncidents(20),
       updatedAt: Date.now(),
     });

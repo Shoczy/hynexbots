@@ -3,7 +3,32 @@ const config = require('../config');
 const launcher = require('../launcher/manager');
 const store = require('../config-service/db');
 const fleetStore = require('../fleet/store');
+const { setHostedBots } = require('../fleet/hostedBots');
 const health = require('../config-service/health');
+
+/**
+ * Build public profiles (name + avatar) for the hosted product bots so the
+ * /status page can show which bots are live. Resolves each bot's Discord user
+ * by its application id (cached by discord.js); falls back to the process name.
+ */
+async function refreshHostedBots(client) {
+  const recs = launcher.statusList();
+  const profiles = await Promise.all(
+    recs.map(async (r) => {
+      let name = r.name;
+      let avatar = null;
+      try {
+        const user = await client.users.fetch(r.appId);
+        name = user.username || name;
+        avatar = user.displayAvatarURL({ size: 64, extension: 'png' });
+      } catch {
+        /* keep the process name + no avatar */
+      }
+      return { id: r.appId, name, avatar, type: r.type, online: launcher.isRunning(r.appId) };
+    }),
+  );
+  setHostedBots(profiles);
+}
 
 module.exports = {
   name: 'clientReady',
@@ -74,5 +99,11 @@ module.exports = {
     // Bring previously-registered managed bots back online (the config service
     // is already listening by now — started in index.js before login).
     launcher.relaunchAll().catch((err) => console.error('Relaunch failed:', err));
+
+    // Publish hosted-bot profiles for the public /status page (after relaunch
+    // settles), then refresh periodically so it tracks start/stop.
+    setTimeout(() => refreshHostedBots(client).catch(() => {}), 8000);
+    const hostedTimer = setInterval(() => refreshHostedBots(client).catch(() => {}), 60_000);
+    if (hostedTimer.unref) hostedTimer.unref();
   },
 };

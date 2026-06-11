@@ -330,16 +330,16 @@ export default function EditorPage() {
           {/* Content */}
           <div className="min-w-0 flex-1">
           {tab === 'basics' && (
-            <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card max-w-xl p-6">
+            <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card p-6 lg:p-8">
               <h2 className="font-display text-xl font-semibold">Basics</h2>
               <p className="mt-1 text-sm text-mist-muted">Core identity and behavior.</p>
-              <div className="mt-5 space-y-4">
+              <div className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-2">
                 <Field label="Command prefix" hint="Used for legacy text commands.">
                   <input className="input font-mono" maxLength={5} value={settings.basics.prefix} onChange={(e) => patchBasics('prefix', e.target.value)} />
                 </Field>
-                <Field label="Embed color">
+                <Field label="Embed color" hint="Accent color of the bot's messages.">
                   <div className="flex items-center gap-3">
-                    <input type="color" className="h-10 w-12 cursor-pointer rounded-lg border border-ink-600 bg-ink-900" value={settings.basics.embedColor} onChange={(e) => patchBasics('embedColor', e.target.value)} />
+                    <input type="color" className="h-10 w-12 shrink-0 cursor-pointer rounded-lg border border-ink-600 bg-ink-900" value={settings.basics.embedColor} onChange={(e) => patchBasics('embedColor', e.target.value)} />
                     <input className="input font-mono" value={settings.basics.embedColor} onChange={(e) => patchBasics('embedColor', e.target.value)} />
                   </div>
                 </Field>
@@ -355,9 +355,11 @@ export default function EditorPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Log channel ID" hint="Where the bot posts logs. Right-click a channel → Copy ID.">
-                  <input className="input font-mono" value={settings.basics.logChannelId} onChange={(e) => patchBasics('logChannelId', e.target.value.replace(/\D/g, ''))} placeholder="123456789012345678" />
-                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Log channel ID" hint="Where the bot posts logs. Right-click a channel → Copy ID.">
+                    <input className="input font-mono" value={settings.basics.logChannelId} onChange={(e) => patchBasics('logChannelId', e.target.value.replace(/\D/g, ''))} placeholder="123456789012345678" />
+                  </Field>
+                </div>
               </div>
             </motion.section>
           )}

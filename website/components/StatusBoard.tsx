@@ -20,12 +20,21 @@ type Incident = {
   durationMs: number;
 };
 
+type HostedBot = {
+  id: string;
+  name: string;
+  avatar: string | null;
+  type: string | null;
+  online: boolean;
+};
+
 type FleetData = {
   operational: boolean;
   nodes: { total: number; online: number };
   bots: { total: number; online: number };
   uptimePct: number;
   list: Node[];
+  hostedBots?: HostedBot[];
   incidents?: Incident[];
   updatedAt: number;
 };
@@ -47,6 +56,7 @@ function relativeTime(ts: number | null): string {
 
 export function StatusBoard() {
   const [state, setState] = useState<State>({ kind: 'loading' });
+  const [openNode, setOpenNode] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -139,9 +149,20 @@ export function StatusBoard() {
 
           {live && live.list.length > 0 && (
             <div className="flex flex-col gap-3">
-              {live.list.map((node) => (
-                <NodeRow key={node.name} node={node} />
-              ))}
+              {live.list.map((node) => {
+                // Bots run on the host node; show them when it's online. (Single-
+                // host deployment — all hosted bots belong to the live node.)
+                const bots = node.online ? live.hostedBots ?? [] : [];
+                return (
+                  <NodeRow
+                    key={node.name}
+                    node={node}
+                    bots={bots}
+                    open={openNode === node.name}
+                    onToggle={() => setOpenNode((cur) => (cur === node.name ? null : node.name))}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -181,24 +202,81 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function NodeRow({ node }: { node: Node }) {
+function NodeRow({ node, bots, open, onToggle }: { node: Node; bots: HostedBot[]; open: boolean; onToggle: () => void }) {
+  const expandable = bots.length > 0;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-ink-700 bg-ink-900/50 px-5 py-4">
-      <div className="flex items-center gap-3">
-        <StatusDot tone={node.online ? 'up' : 'down'} live={node.online} />
-        <div>
-          <div className="font-medium text-mist">{node.name}</div>
-          <div className="text-xs text-mist-faint">
-            {node.online ? `Online · ${relativeTime(node.lastSeen)}` : `Offline · ${relativeTime(node.lastSeen)}`}
+    <div className="overflow-hidden rounded-xl border border-ink-700 bg-ink-900/50">
+      <button
+        type="button"
+        onClick={expandable ? onToggle : undefined}
+        aria-expanded={expandable ? open : undefined}
+        className={`flex w-full flex-wrap items-center justify-between gap-4 px-5 py-4 text-left ${
+          expandable ? 'transition-colors hover:bg-ink-800/40' : 'cursor-default'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <StatusDot tone={node.online ? 'up' : 'down'} live={node.online} />
+          <div>
+            <div className="font-medium text-mist">{node.name}</div>
+            <div className="text-xs text-mist-faint">
+              {node.online ? `Online · ${relativeTime(node.lastSeen)}` : `Offline · ${relativeTime(node.lastSeen)}`}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex items-center gap-5 text-sm text-mist-muted">
-        {node.cpu != null && <Stat label="CPU" value={`${node.cpu}%`} />}
-        {node.mem != null && <Stat label="MEM" value={`${node.mem}%`} />}
-        <Stat label="Bots" value={`${node.bots.online}/${node.bots.total}`} />
+        <div className="flex items-center gap-5 text-sm text-mist-muted">
+          {node.cpu != null && <Stat label="CPU" value={`${node.cpu}%`} />}
+          {node.mem != null && <Stat label="MEM" value={`${node.mem}%`} />}
+          <Stat label="Bots" value={`${node.bots.online}/${node.bots.total}`} />
+          {expandable && (
+            <svg
+              className={`h-4 w-4 shrink-0 text-mist-faint transition-transform ${open ? 'rotate-180' : ''}`}
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="M6 8l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+      </button>
+
+      {expandable && open && (
+        <div className="border-t border-ink-700/70 bg-ink-950/40 px-5 py-4">
+          <p className="mb-3 text-[11px] font-medium uppercase tracking-wider text-mist-faint">Bots on this node</p>
+          <div className="flex flex-col gap-2">
+            {bots.map((b) => (
+              <BotRow key={b.id} bot={b} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BotRow({ bot }: { bot: HostedBot }) {
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-ink-700/70 bg-ink-900/50 px-3 py-2.5">
+      {bot.avatar ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={bot.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full bg-ink-800" />
+      ) : (
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink-800 text-sm text-mist-faint">🤖</div>
+      )}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium text-mist">{bot.name}</span>
+          {bot.type && (
+            <span className="rounded-full border border-ink-600 bg-ink-800 px-2 py-0.5 text-[10px] uppercase tracking-wider text-mist-faint">
+              {bot.type}
+            </span>
+          )}
+        </div>
+        <div className="font-mono text-xs text-mist-faint">{bot.id}</div>
       </div>
+      <StatusDot tone={bot.online ? 'up' : 'down'} live={bot.online} />
     </div>
   );
 }
