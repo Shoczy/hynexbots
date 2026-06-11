@@ -17,6 +17,6 @@ module.exports = {
     const member = interaction.options.getMember('user');
     if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], ephemeral: true });
     const res = await doUnmute(interaction.guild, member, { moderator: interaction.user });
-    return interaction.reply({ embeds: [res.embed], ephemeral: !res.ok });
+    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
   },
 };

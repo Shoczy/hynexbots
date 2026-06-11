@@ -3,6 +3,7 @@
 const { EmbedBuilder } = require('discord.js');
 const { cfg } = require('./state');
 const { brandColor } = require('./embeds');
+const { renderBlocks } = require('./renderBlocks');
 
 /** Replace {name} tokens with live values; unknown tokens are left as-is. */
 function substitute(str, vars) {
@@ -10,13 +11,23 @@ function substitute(str, vars) {
 }
 
 /**
- * If the customer configured a custom reply embed for `name` (in the dashboard
- * Commands tab), build it with `vars` substituted. Otherwise return null so the
- * caller falls back to its built-in response.
+ * If the customer enabled a custom reply for `name` (dashboard Commands tab),
+ * build a ready-to-send message fragment with `vars` substituted — either a
+ * Components V2 payload ({ flags, components }) when they designed blocks, or a
+ * legacy embed ({ embeds: [...] }). Returns null so the caller falls back to its
+ * built-in response.
  */
-function commandEmbed(name, vars = {}) {
+function commandReply(name, vars = {}) {
   const c = cfg('commands', {})[name]?.embed;
   if (!c || !c.enabled) return null;
+
+  // Block builder wins when the customer placed any blocks.
+  if (c.v2 && Array.isArray(c.v2.blocks) && c.v2.blocks.length) {
+    const payload = renderBlocks({ ...c.v2, enabled: true }, vars);
+    if (payload) return payload;
+  }
+
+  // Legacy single embed (title / description / footer / color).
   const e = new EmbedBuilder();
   const color = /^#[0-9a-fA-F]{6}$/.test(c.color || '') ? parseInt(c.color.slice(1), 16) : brandColor();
   e.setColor(color);
@@ -25,7 +36,7 @@ function commandEmbed(name, vars = {}) {
   if (desc) e.setDescription(desc);
   e.setFooter({ text: c.footer ? substitute(c.footer, vars).slice(0, 2048) : 'Hynex Bots' });
   e.setTimestamp();
-  return e;
+  return { embeds: [e] };
 }
 
-module.exports = { commandEmbed };
+module.exports = { commandReply };

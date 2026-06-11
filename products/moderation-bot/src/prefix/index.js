@@ -34,6 +34,8 @@ async function resolveMember(message, token) {
 }
 
 const send = (message, embed) => message.channel.send({ embeds: [embed] }).catch(() => {});
+// Send an action result: a custom Components V2 reply when present, else its embed.
+const sendRes = (message, res) => message.channel.send(res.reply || { embeds: [res.embed] }).catch(() => {});
 
 /** Handle a prefix command. Returns true if a command was recognised. */
 async function handlePrefix(message) {
@@ -61,13 +63,13 @@ async function handlePrefix(message) {
       const user = await resolveUser(message, args[0]);
       if (!user) return reply(message, 'Usage: `ban @user [reason]`');
       const res = await actions.doBan(message.guild, user, { moderator: message.author, reason: args.slice(1).join(' ') || 'No reason provided' });
-      return send(message, res.embed), true;
+      return sendRes(message, res), true;
     }
     case 'kick': {
       const member = await resolveMember(message, args[0]);
       if (!member) return reply(message, 'Usage: `kick @user [reason]`');
       const res = await actions.doKick(message.guild, member, { moderator: message.author, reason: args.slice(1).join(' ') || 'No reason provided' });
-      return send(message, res.embed), true;
+      return sendRes(message, res), true;
     }
     case 'mute': {
       const member = await resolveMember(message, args[0]);
@@ -75,20 +77,20 @@ async function handlePrefix(message) {
       const maybeDur = parseDuration(args[1]);
       const reason = (maybeDur ? args.slice(2) : args.slice(1)).join(' ') || 'No reason provided';
       const res = await actions.doMute(message.guild, member, { moderator: message.author, durationMs: maybeDur, reason });
-      return send(message, res.embed), true;
+      return sendRes(message, res), true;
     }
     case 'unmute': {
       const member = await resolveMember(message, args[0]);
       if (!member) return reply(message, 'Usage: `unmute @user`');
       const res = await actions.doUnmute(message.guild, member, { moderator: message.author });
-      return send(message, res.embed), true;
+      return sendRes(message, res), true;
     }
     case 'warn': {
       const member = await resolveMember(message, args[0]);
       if (!member) return reply(message, 'Usage: `warn @user [reason]`');
       if (member.user.bot) return reply(message, 'You can\'t warn a bot.');
       const res = await actions.doWarn(message.guild, member, { moderator: message.author, reason: args.slice(1).join(' ') || 'No reason provided' });
-      return send(message, res.embed), true;
+      return sendRes(message, res), true;
     }
     case 'warnings': {
       const user = await resolveUser(message, args[0]);
@@ -115,7 +117,7 @@ async function handlePrefix(message) {
     case 'lockdown': {
       const unlock = (args[0] || '').toLowerCase() === 'unlock';
       const res = await actions.doLockdown(message.channel, { lock: !unlock, moderator: message.author });
-      return send(message, res.embed), true;
+      return sendRes(message, res), true;
     }
     case 'help': {
       const e = info('🛡️ Moderation Commands').addFields(

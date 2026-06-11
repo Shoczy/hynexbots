@@ -1,5 +1,7 @@
 // Shared settings types + constants for the editor UI.
 
+import { type V2Message, emptyV2Message } from './blocks';
+
 export type Embed = {
   enabled: boolean;
   title: string;
@@ -14,6 +16,8 @@ export type MessageBlock = {
   channelId: string;
   text: string;
   embed: Embed;
+  /** Optional Components V2 body designed in the block builder (overrides text+embed). */
+  v2?: V2Message;
 };
 
 export type AutoResponse = {
@@ -30,11 +34,13 @@ export type CommandEmbed = {
   description: string;
   color: string;
   footer: string;
+  /** Optional Components V2 reply designed in the block builder. */
+  v2?: V2Message;
 };
 export type CommandPerm = { enabled: boolean; roles: string[]; embed?: CommandEmbed };
 
 export function emptyCommandEmbed(): CommandEmbed {
-  return { enabled: false, title: '', description: '', color: '', footer: '' };
+  return { enabled: false, title: '', description: '', color: '', footer: '', v2: emptyV2Message() };
 }
 
 /**
@@ -109,6 +115,8 @@ export type VerificationSettings = {
   description: string;
   buttonLabel: string;
   successMessage: string;
+  /** Optional Components V2 panel content (the Verify button is always appended). */
+  v2?: V2Message;
 };
 
 // Self-assign role panels.
@@ -235,6 +243,7 @@ export function defaultVerification(): VerificationSettings {
     description: 'Click the button below to confirm you’re human and unlock the server.',
     buttonLabel: 'Verify',
     successMessage: 'You’re verified — welcome aboard! 🎉',
+    v2: emptyV2Message(),
   };
 }
 

@@ -4,8 +4,13 @@ import { useState, type ReactNode } from 'react';
 import { Field, Toggle } from './ui';
 import { Card, RolesField } from './settingsKit';
 import { DiscordPreview } from './DiscordPreview';
+import { BlockBuilder } from './BlockBuilder';
 import { SendAction } from './SendAction';
+import { emptyV2Message } from '@/lib/blocks';
 import { MATCH_MODES, VARIABLES, type Settings, type MessageBlock, type AutoResponse } from '@/lib/settings';
+
+// Bare variable names (no braces) for the block builder's insert chips.
+const VAR_TOKENS = VARIABLES.map((v) => v.token.replace(/[{}]/g, ''));
 
 type Messages = Settings['messages'];
 
@@ -108,6 +113,7 @@ function BlockEditor({
 }) {
   const set = (patch: Partial<MessageBlock>) => onChange({ ...block, ...patch });
   const setEmbed = (patch: Partial<MessageBlock['embed']>) => onChange({ ...block, embed: { ...block.embed, ...patch } });
+  const v2 = block.v2 ?? emptyV2Message();
 
   return (
     <section className="card p-6">
@@ -120,60 +126,74 @@ function BlockEditor({
       </div>
 
       {block.enabled && (
-        <div className="mt-5 grid gap-6 lg:grid-cols-2">
-          {/* Left: inputs */}
-          <div className="space-y-4">
-            <Field label="Channel ID" hint="Where this message is posted.">
-              <input
-                className="input font-mono"
-                placeholder="123456789012345678"
-                value={block.channelId}
-                onChange={(e) => set({ channelId: e.target.value.replace(/\D/g, '') })}
-              />
-            </Field>
-            <Field label="Message text" hint="Plain text sent above the embed. Supports variables.">
-              <textarea
-                className="input min-h-[80px] resize-y"
-                placeholder="Welcome {user} to {server}! 🎉"
-                value={block.text}
-                onChange={(e) => set({ text: e.target.value })}
-              />
-            </Field>
+        <div className="mt-5 space-y-5">
+          <Field label="Channel ID" hint="Where this message is posted.">
+            <input
+              className="input max-w-xs font-mono"
+              placeholder="123456789012345678"
+              value={block.channelId}
+              onChange={(e) => set({ channelId: e.target.value.replace(/\D/g, '') })}
+            />
+          </Field>
 
-            <div className="rounded-xl border border-ink-700 p-4">
-              <Toggle label="Add an embed" checked={block.embed.enabled} onChange={(v) => setEmbed({ enabled: v })} />
-              {block.embed.enabled && (
-                <div className="mt-4 space-y-4">
-                  <Field label="Title">
-                    <input className="input" maxLength={256} value={block.embed.title} onChange={(e) => setEmbed({ title: e.target.value })} />
-                  </Field>
-                  <Field label="Description">
-                    <textarea className="input min-h-[70px] resize-y" maxLength={4000} value={block.embed.description} onChange={(e) => setEmbed({ description: e.target.value })} />
-                  </Field>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Field label="Color">
-                      <div className="flex items-center gap-2">
-                        <input type="color" className="h-10 w-12 cursor-pointer rounded-lg border border-ink-600 bg-ink-900" value={block.embed.color} onChange={(e) => setEmbed({ color: e.target.value })} />
-                        <input className="input font-mono" value={block.embed.color} onChange={(e) => setEmbed({ color: e.target.value })} />
+          {/* Components V2 block builder — stack text / separators / images / link buttons. */}
+          <BlockBuilder
+            value={v2}
+            onChange={(next) => set({ v2: next })}
+            botName={botName}
+            variables={VAR_TOKENS}
+            toggleLabel="Design with the block builder (Components V2)"
+            toggleHint="Stack text, separators, images and link buttons. When off, the simple text + embed below is used."
+          />
+
+          {/* Legacy simple text + embed — used when the block builder is off. */}
+          {!v2.enabled && (
+            <div className="grid gap-6 border-t border-ink-700/60 pt-5 lg:grid-cols-2">
+              <div className="space-y-4">
+                <Field label="Message text" hint="Plain text sent above the embed. Supports variables.">
+                  <textarea
+                    className="input min-h-[80px] resize-y"
+                    placeholder="Welcome {user} to {server}! 🎉"
+                    value={block.text}
+                    onChange={(e) => set({ text: e.target.value })}
+                  />
+                </Field>
+
+                <div className="rounded-xl border border-ink-700 p-4">
+                  <Toggle label="Add an embed" checked={block.embed.enabled} onChange={(v) => setEmbed({ enabled: v })} />
+                  {block.embed.enabled && (
+                    <div className="mt-4 space-y-4">
+                      <Field label="Title">
+                        <input className="input" maxLength={256} value={block.embed.title} onChange={(e) => setEmbed({ title: e.target.value })} />
+                      </Field>
+                      <Field label="Description">
+                        <textarea className="input min-h-[70px] resize-y" maxLength={4000} value={block.embed.description} onChange={(e) => setEmbed({ description: e.target.value })} />
+                      </Field>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Field label="Color">
+                          <div className="flex items-center gap-2">
+                            <input type="color" className="h-10 w-12 cursor-pointer rounded-lg border border-ink-600 bg-ink-900" value={block.embed.color} onChange={(e) => setEmbed({ color: e.target.value })} />
+                            <input className="input font-mono" value={block.embed.color} onChange={(e) => setEmbed({ color: e.target.value })} />
+                          </div>
+                        </Field>
+                        <Field label="Image URL">
+                          <input className="input" placeholder="https://…" value={block.embed.image} onChange={(e) => setEmbed({ image: e.target.value })} />
+                        </Field>
                       </div>
-                    </Field>
-                    <Field label="Image URL">
-                      <input className="input" placeholder="https://…" value={block.embed.image} onChange={(e) => setEmbed({ image: e.target.value })} />
-                    </Field>
-                  </div>
-                  <Field label="Footer">
-                    <input className="input" maxLength={2048} value={block.embed.footer} onChange={(e) => setEmbed({ footer: e.target.value })} />
-                  </Field>
+                      <Field label="Footer">
+                        <input className="input" maxLength={2048} value={block.embed.footer} onChange={(e) => setEmbed({ footer: e.target.value })} />
+                      </Field>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Right: preview */}
-          <div>
-            <p className="label">Live preview</p>
-            <DiscordPreview block={block} botName={botName} />
-          </div>
+              <div>
+                <p className="label">Live preview</p>
+                <DiscordPreview block={block} botName={botName} />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

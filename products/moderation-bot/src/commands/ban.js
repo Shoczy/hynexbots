@@ -25,6 +25,6 @@ module.exports = {
       return interaction.reply({ embeds: [err('You can\'t ban yourself.')], ephemeral: true });
     }
     const res = await doBan(interaction.guild, user, { moderator: interaction.user, reason, deleteDays });
-    return interaction.reply({ embeds: [res.embed], ephemeral: !res.ok });
+    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
   },
 };

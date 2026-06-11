@@ -2,7 +2,7 @@
 
 const { mod } = require('./state');
 const { make, ok, err, COLORS } = require('./embeds');
-const { commandEmbed } = require('./commandEmbed');
+const { commandReply } = require('./commandEmbed');
 const { logModAction } = require('./log');
 const store = require('./store');
 
@@ -51,8 +51,8 @@ async function doBan(guild, targetUser, { moderator, reason = 'No reason provide
   }
   const card = actionCard(guild, { title: 'Member Banned', color: COLORS.danger, target: targetUser, moderator, reason });
   await logModAction(guild, card);
-  const custom = commandEmbed('ban', { user: targetUser.tag, moderator: moderator?.tag || 'system', reason, server: guild.name });
-  return { ok: true, embed: custom || card };
+  const custom = commandReply('ban', { user: targetUser.tag, moderator: moderator?.tag || 'system', reason, server: guild.name });
+  return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
 }
 
 async function doKick(guild, targetMember, { moderator, reason = 'No reason provided' } = {}) {
@@ -64,8 +64,8 @@ async function doKick(guild, targetMember, { moderator, reason = 'No reason prov
   }
   const card = actionCard(guild, { title: 'Member Kicked', color: COLORS.danger, target: targetMember.user, moderator, reason });
   await logModAction(guild, card);
-  const custom = commandEmbed('kick', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, server: guild.name });
-  return { ok: true, embed: custom || card };
+  const custom = commandReply('kick', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, server: guild.name });
+  return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
 }
 
 /**
@@ -95,8 +95,8 @@ async function doMute(guild, targetMember, { moderator, reason = 'No reason prov
       fields: durationMs ? [{ name: 'Duration', value: humanizeMs(durationMs), inline: true }] : [],
     });
     await logModAction(guild, card);
-    const custom = commandEmbed('mute', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, duration: durationMs ? humanizeMs(durationMs) : 'indefinite', server: guild.name });
-    return { ok: true, embed: custom || card };
+    const custom = commandReply('mute', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, duration: durationMs ? humanizeMs(durationMs) : 'indefinite', server: guild.name });
+    return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
   }
 
   // No mute role → native timeout.
@@ -115,8 +115,8 @@ async function doMute(guild, targetMember, { moderator, reason = 'No reason prov
     fields: [{ name: 'Duration', value: humanizeMs(ms), inline: true }],
   });
   await logModAction(guild, card);
-  const custom = commandEmbed('mute', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, duration: humanizeMs(ms), server: guild.name });
-  return { ok: true, embed: custom || card };
+  const custom = commandReply('mute', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, duration: humanizeMs(ms), server: guild.name });
+  return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
 }
 
 async function doUnmute(guild, targetMember, { moderator } = {}) {
@@ -141,8 +141,8 @@ async function doUnmute(guild, targetMember, { moderator } = {}) {
   if (!acted) return { ok: false, embed: err(`**${targetMember.user.tag}** isn't muted.`) };
   const card = actionCard(guild, { title: 'Member Unmuted', color: COLORS.success, target: targetMember.user, moderator });
   await logModAction(guild, card);
-  const custom = commandEmbed('unmute', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', server: guild.name });
-  return { ok: true, embed: custom || card };
+  const custom = commandReply('unmute', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', server: guild.name });
+  return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
 }
 
 /**
@@ -168,8 +168,8 @@ async function doWarn(guild, targetMember, { moderator, reason = 'No reason prov
   if (autoAction) fields.push({ name: 'Auto-action', value: autoAction, inline: true });
   const card = actionCard(guild, { title: 'Member Warned', color: COLORS.warning, target: targetMember.user, moderator, reason, fields });
   await logModAction(guild, card);
-  const custom = commandEmbed('warn', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, count, server: guild.name });
-  return { ok: true, embed: custom || card };
+  const custom = commandReply('warn', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, count, server: guild.name });
+  return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
 }
 
 /** Apply an escalation action by name. Returns a short human label, or '' on failure. */

@@ -31,6 +31,46 @@ const int = (v, min, max, fallback) => {
 const url = (v, max = 512) =>
   typeof v === 'string' && (v === '' || /^https?:\/\/.+/i.test(v)) ? v.slice(0, max) : '';
 
+const MAX_BLOCKS = 25;
+const MAX_BLOCK_BUTTONS = 5;
+
+/**
+ * Sanitize a Components V2 message: an ordered list of text / separator / image
+ * / link-button blocks designed in the dashboard block builder. Always returns a
+ * stable `{ enabled, accent, blocks }` shape (never null) so the field persists.
+ * Buttons are link-only (label + http(s) url) — the only kind that works without
+ * a server-side handler; incomplete blocks/buttons are dropped.
+ */
+function sanitizeBlocks(v) {
+  const i = v && typeof v === 'object' ? v : {};
+  const rawBlocks = Array.isArray(i.blocks) ? i.blocks : [];
+  const blocks = [];
+  for (const b of rawBlocks.slice(0, MAX_BLOCKS)) {
+    if (!b || typeof b !== 'object') continue;
+    const id = genId(b.id);
+    if (b.type === 'separator') {
+      blocks.push({ id, type: 'separator', divider: b.divider === undefined ? true : Boolean(b.divider), large: Boolean(b.large) });
+    } else if (b.type === 'image') {
+      const u = url(b.url);
+      if (!u) continue;
+      blocks.push({ id, type: 'image', url: u });
+    } else if (b.type === 'buttons') {
+      const buttons = (Array.isArray(b.buttons) ? b.buttons : [])
+        .filter((x) => x && typeof x === 'object')
+        .map((x) => ({ id: genId(x.id), label: str(x.label, 80, '').trim(), url: url(x.url), emoji: str(x.emoji, 64, '').trim() }))
+        .filter((x) => x.label && x.url) // a link button needs both a label and a URL
+        .slice(0, MAX_BLOCK_BUTTONS);
+      if (!buttons.length) continue;
+      blocks.push({ id, type: 'buttons', buttons });
+    } else {
+      const content = str(b.content, 4000, '');
+      if (!content.trim()) continue;
+      blocks.push({ id, type: 'text', content });
+    }
+  }
+  return { enabled: Boolean(i.enabled), accent: isHex(i.accent) ? i.accent : '', blocks };
+}
+
 /** Sanitize one welcome/leave message block. */
 function sanitizeMessageBlock(m, def) {
   const b = m || {};
@@ -47,6 +87,7 @@ function sanitizeMessageBlock(m, def) {
       image: url(e.image),
       footer: str(e.footer, 2048, ''),
     },
+    v2: sanitizeBlocks(b.v2),
   };
 }
 
@@ -80,9 +121,11 @@ function sanitizeCommandEmbed(e) {
   const footer = str(e.footer, 2048, '').trim();
   const color = isHex(e.color) ? e.color : '';
   const enabled = Boolean(e.enabled);
+  const v2 = sanitizeBlocks(e.v2);
+  const hasV2 = v2.enabled || v2.blocks.length > 0;
   // Drop the block entirely if there's no content at all.
-  if (!title && !description && !footer && !color && !enabled) return null;
-  return { enabled, title, description, color, footer };
+  if (!title && !description && !footer && !color && !enabled && !hasV2) return null;
+  return { enabled, title, description, color, footer, v2 };
 }
 
 /** Sanitize the moderation-bot settings section against its defaults. */
@@ -178,6 +221,7 @@ function sanitizeVerification(v, def) {
     description: str(i.description, 2000, def.description) || def.description,
     buttonLabel: str(i.buttonLabel, 80, def.buttonLabel) || def.buttonLabel,
     successMessage: str(i.successMessage, 1000, def.successMessage) || def.successMessage,
+    v2: sanitizeBlocks(i.v2),
   };
 }
 

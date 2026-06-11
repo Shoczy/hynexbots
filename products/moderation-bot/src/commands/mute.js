@@ -25,6 +25,6 @@ module.exports = {
       return interaction.reply({ embeds: [err('You can\'t mute yourself.')], ephemeral: true });
     }
     const res = await doMute(interaction.guild, member, { moderator: interaction.user, reason, durationMs });
-    return interaction.reply({ embeds: [res.embed], ephemeral: !res.ok });
+    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
   },
 };

@@ -20,6 +20,6 @@ module.exports = {
     if (!member) return interaction.reply({ embeds: [err('That user isn\'t in this server.')], ephemeral: true });
     if (member.user.bot) return interaction.reply({ embeds: [err('You can\'t warn a bot.')], ephemeral: true });
     const res = await doWarn(interaction.guild, member, { moderator: interaction.user, reason });
-    return interaction.reply({ embeds: [res.embed] });
+    return interaction.reply(res.reply || { embeds: [res.embed] });
   },
 };

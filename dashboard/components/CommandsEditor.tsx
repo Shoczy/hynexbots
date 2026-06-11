@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { Toggle } from './ui';
 import { RolePicker as GuildRolePicker } from './settingsKit';
-import { EmbedPreview as MessagePreview } from './EmbedPreview';
+import { BlockBuilder } from './BlockBuilder';
+import { emptyV2Message } from '@/lib/blocks';
 import {
   COMMAND_GROUPS,
   COMMAND_VARIABLES,
@@ -121,39 +122,12 @@ const SAMPLE: Record<string, string> = {
   reason: 'Breaking the rules',
   duration: '10m',
   count: '3',
-  balance: '1,250',
-  amount: '250',
-  streak: '4',
-  currency: 'coins',
-  symbol: '🪙',
-  result: 'won',
-  title: 'Daft Punk — Get Lucky',
-  url: '#',
-  requester: '@SomeUser',
-  volume: '80',
-  filter: 'bassboost',
+  players: '42',
+  maxPlayers: '64',
+  hostname: 'My Server',
+  minutes: '5',
   latency: '42',
 };
-
-const fillSample = (s: string) => String(s || '').replace(/\{(\w+)\}/g, (_, k) => SAMPLE[k] ?? `{${k}}`);
-
-function EmbedPreview({ embed, botName }: { embed: CommandEmbed; botName: string }) {
-  return (
-    <div className="rounded-xl border border-ink-700 bg-[#313338] p-3">
-      <span className="text-[10px] uppercase tracking-wide text-mist-faint">Preview</span>
-      <div className="mt-2 [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0">
-        <MessagePreview
-          botName={botName}
-          accent={embed.color || '#6366f1'}
-          title={embed.title ? fillSample(embed.title) : undefined}
-          description={embed.description ? fillSample(embed.description) : undefined}
-          footer={embed.footer ? fillSample(embed.footer) : undefined}
-          emptyHint="Type a title or description to preview your embed…"
-        />
-      </div>
-    </div>
-  );
-}
 
 function CommandEmbedEditor({
   cmd,
@@ -171,9 +145,7 @@ function CommandEmbedEditor({
   const e = value ?? emptyCommandEmbed();
   const [open, setOpen] = useState(e.enabled);
   const vars = COMMAND_VARIABLES[cmd] ?? [];
-
-  // Append a {variable} to the description when its chip is clicked.
-  const insertVar = (v: string) => onChange({ description: `${e.description}${e.description ? ' ' : ''}{${v}}` });
+  const v2 = e.v2 ?? emptyV2Message();
 
   return (
     <div className="mt-3 rounded-xl border border-ink-700 bg-ink-900/40 p-3">
@@ -183,7 +155,7 @@ function CommandEmbedEditor({
         className="flex w-full items-center justify-between text-left"
       >
         <span className="text-xs font-medium text-mist">
-          Custom reply embed{' '}
+          Custom reply{' '}
           {e.enabled && <span className="ml-1 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent">on</span>}
         </span>
         <span className="text-xs text-mist-faint">{open ? 'Hide' : 'Edit'}</span>
@@ -193,68 +165,19 @@ function CommandEmbedEditor({
         <div className="mt-3 space-y-3">
           <Toggle
             label="Use a custom reply for this command"
-            hint="When on, the bot sends your embed instead of its default."
+            hint="When on, the bot sends your designed message instead of its default."
             checked={e.enabled}
             onChange={onToggle}
           />
 
-          <div className={e.enabled ? 'space-y-3' : 'pointer-events-none space-y-3 opacity-50'}>
-            <input
-              className="input text-sm"
-              placeholder="Embed title"
-              maxLength={256}
-              value={e.title}
-              onChange={(ev) => onChange({ title: ev.target.value })}
+          <div className={e.enabled ? '' : 'pointer-events-none opacity-50'}>
+            <BlockBuilder
+              value={v2}
+              onChange={(next) => onChange({ v2: next })}
+              botName={botName}
+              variables={vars}
+              sample={SAMPLE}
             />
-            <textarea
-              className="input min-h-[80px] text-sm"
-              placeholder="Embed description — use variables below, e.g. Hey {user}, your balance is {balance} {currency}."
-              maxLength={4000}
-              value={e.description}
-              onChange={(ev) => onChange({ description: ev.target.value })}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-mist-faint">Color</span>
-              <input
-                type="color"
-                className="h-8 w-10 cursor-pointer rounded-md border border-ink-600 bg-ink-900"
-                value={e.color || '#6366f1'}
-                onChange={(ev) => onChange({ color: ev.target.value })}
-              />
-              <input
-                className="input w-28 font-mono text-xs"
-                placeholder="#6366f1"
-                value={e.color}
-                onChange={(ev) => onChange({ color: ev.target.value })}
-              />
-              <input
-                className="input flex-1 text-sm"
-                placeholder="Footer (optional)"
-                maxLength={2048}
-                value={e.footer}
-                onChange={(ev) => onChange({ footer: ev.target.value })}
-              />
-            </div>
-
-            {vars.length > 0 && (
-              <div>
-                <span className="text-xs text-mist-faint">Variables (click to insert)</span>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {vars.map((v) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => insertVar(v)}
-                      className="rounded-md border border-ink-600 bg-ink-800 px-2 py-1 font-mono text-[11px] text-mist-muted transition-colors hover:border-accent/50 hover:text-mist"
-                    >
-                      {`{${v}}`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <EmbedPreview embed={e} botName={botName} />
           </div>
         </div>
       )}

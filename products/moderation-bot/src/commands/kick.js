@@ -22,6 +22,6 @@ module.exports = {
       return interaction.reply({ embeds: [err('You can\'t kick yourself.')], ephemeral: true });
     }
     const res = await doKick(interaction.guild, member, { moderator: interaction.user, reason });
-    return interaction.reply({ embeds: [res.embed], ephemeral: !res.ok });
+    return interaction.reply({ ...(res.reply || { embeds: [res.embed] }), ephemeral: !res.ok });
   },
 };

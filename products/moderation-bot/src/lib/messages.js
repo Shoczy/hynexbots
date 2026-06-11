@@ -1,6 +1,19 @@
 'use strict';
 
 const { brandColor, v2 } = require('./embeds');
+const { renderBlocks } = require('./renderBlocks');
+
+/** Member/guild variable map shared by the legacy and block-builder renderers. */
+function memberVars(member) {
+  const g = member.guild;
+  return {
+    user: `<@${member.id}>`,
+    username: member.user?.username || 'member',
+    memberName: member.displayName || member.user?.username || 'member',
+    server: g?.name || 'the server',
+    memberCount: String(g?.memberCount ?? ''),
+  };
+}
 
 /**
  * Substitute the dashboard's message variables with live member/guild data.
@@ -29,6 +42,14 @@ function hexToInt(hex) {
  */
 function buildMessagePayload(block, member) {
   if (!block || !block.enabled) return null;
+
+  // Block builder wins when the customer designed a custom V2 body.
+  if (block.v2?.enabled) {
+    const payload = renderBlocks(block.v2, memberVars(member));
+    if (payload) return payload;
+    // enabled-but-empty → fall through to the legacy text/embed body
+  }
+
   const text = block.text ? applyVars(block.text, member) : '';
   const e = block.embed;
   const items = [];

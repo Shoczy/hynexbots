@@ -248,6 +248,17 @@ function fivemDefaults() {
   };
 }
 
+/**
+ * An optional Components V2 message: an ordered list of blocks (text /
+ * separator / image / link-buttons) the customer designs in the dashboard's
+ * block builder. When `enabled`, the bot renders this instead of its built-in
+ * output. MUST be present in every default that holds one, or mergeSettings
+ * drops it on save/load (it only keeps keys listed in the default).
+ */
+function v2Default() {
+  return { enabled: false, accent: '', blocks: [] };
+}
+
 /** Tailored config for the verification gate: a button members click to gain access. */
 function verificationDefaults() {
   return {
@@ -257,6 +268,7 @@ function verificationDefaults() {
     description: 'Click the button below to confirm you’re human and unlock the server.',
     buttonLabel: 'Verify',
     successMessage: 'You’re verified — welcome aboard! 🎉',
+    v2: v2Default(), // optional custom panel content (block builder)
   };
 }
 
@@ -348,6 +360,7 @@ function messageBlock() {
     channelId: '',
     text: '',
     embed: { enabled: false, title: '', description: '', color: '#6366f1', image: '', footer: '' },
+    v2: v2Default(), // optional block-builder body (used instead of text+embed when enabled)
   };
 }
 

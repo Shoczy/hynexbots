@@ -3,6 +3,7 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { cfg } = require('../lib/state');
 const { brandColor, ok, err, v2 } = require('../lib/embeds');
+const { renderBlocks } = require('../lib/renderBlocks');
 
 // Stable custom id so a panel posted long ago keeps working across restarts.
 const VERIFY_BUTTON_ID = 'hynex:verify';
@@ -17,6 +18,14 @@ function panelPayload() {
       .setStyle(ButtonStyle.Success)
       .setEmoji('✅'),
   );
+
+  // Custom panel content from the block builder — the functional verify button
+  // is always appended after the customer's blocks.
+  if (v.v2?.enabled) {
+    const payload = renderBlocks(v.v2, {}, [{ separator: true }, { row }, '-# Hynex Bots']);
+    if (payload) return payload;
+  }
+
   return v2(
     [
       `## ${v.title || 'Verify to continue'}`,
