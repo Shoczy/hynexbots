@@ -164,6 +164,47 @@ export function FiveMEditor({
             )}
           </div>
         </Row>
+
+        <Row
+          label="Server down alerts"
+          hint="Pings a role when your server goes offline and posts again when it recovers."
+          checked={value.monitor.enabled}
+          onChange={(v) => set('monitor', { enabled: v })}
+        >
+          <div className="space-y-3">
+            <ChannelField
+              label="Alert channel"
+              hint="Where the offline / recovery alerts are posted."
+              value={value.monitor.channelId}
+              onChange={(v) => set('monitor', { channelId: v })}
+              types={CHANNEL_TYPES.text}
+            />
+            <RoleField
+              label="Ping role (optional)"
+              hint="This role is pinged when the server goes down."
+              value={value.monitor.pingRoleId}
+              onChange={(v) => set('monitor', { pingRoleId: v })}
+            />
+            <div className="flex flex-wrap items-center gap-2 text-sm text-mist-muted">
+              <span>Alert after</span>
+              <NumInput value={value.monitor.downChecks} min={1} max={10} onChange={(n) => set('monitor', { downChecks: n })} />
+              <span>failed checks in a row (one check per minute)</span>
+            </div>
+          </div>
+        </Row>
+
+        <Row
+          label="Playtime tracking"
+          hint="Tracks how long each player is on the server for a /playtime leaderboard. No in-game setup needed."
+          checked={value.playtime.enabled}
+          onChange={(v) => set('playtime', { enabled: v })}
+        >
+          <p className="text-xs text-mist-muted">
+            While on, the bot checks who&apos;s online every minute and adds up their time. Players use{' '}
+            <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">/playtime</code> and{' '}
+            <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">/playtime-top</code>.
+          </p>
+        </Row>
       </Card>
     </div>
   );

@@ -147,6 +147,8 @@ export type FiveMSettings = {
   whitelist: { enabled: boolean; roleId: string; logChannelId: string };
   reports: { enabled: boolean; channelId: string; pingRoleId: string };
   restarts: { enabled: boolean; channelId: string; times: string[]; warnMinutes: number[] };
+  monitor: { enabled: boolean; channelId: string; pingRoleId: string; downChecks: number };
+  playtime: { enabled: boolean };
 };
 
 // Leveling-bot tailored settings.
@@ -240,6 +242,8 @@ export function defaultFiveM(): FiveMSettings {
     whitelist: { enabled: false, roleId: '', logChannelId: '' },
     reports: { enabled: false, channelId: '', pingRoleId: '' },
     restarts: { enabled: false, channelId: '', times: [], warnMinutes: [15, 5, 1] },
+    monitor: { enabled: false, channelId: '', pingRoleId: '', downChecks: 2 },
+    playtime: { enabled: false },
   };
 }
 
@@ -338,7 +342,7 @@ export const COMMAND_GROUPS: { module: string; label: string; commands: string[]
   { module: 'verification', label: 'Verification', commands: ['verify-panel'] },
   { module: 'reactionroles', label: 'Reaction Roles', commands: ['roles-panel'] },
   { module: 'leveling', label: 'Leveling', commands: ['rank', 'levels', 'setxp'] },
-  { module: 'fivem', label: 'FiveM', commands: ['status', 'players', 'whitelist', 'restart'] },
+  { module: 'fivem', label: 'FiveM', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top'] },
   { module: 'utility', label: 'Utility', commands: ['help', 'ping', 'serverinfo', 'userinfo', 'avatar'] },
 ];
 

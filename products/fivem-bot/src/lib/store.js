@@ -35,7 +35,48 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_wl_ident ON whitelist(guild_id, identifier);
 `);
 
+// Playtime: total seconds accumulated per stable in-game identifier (steam:,
+// license:, …). One FiveM server per bot, so it's tracked globally, not per guild.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS playtime (
+    identifier TEXT PRIMARY KEY,
+    name       TEXT NOT NULL DEFAULT '',
+    seconds    INTEGER NOT NULL DEFAULT 0,
+    last_seen  INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
 const norm = (s) => String(s || '').trim().toLowerCase();
+
+/** Add `seconds` of playtime to an identifier and refresh its display name. */
+function addPlaytime(identifier, name, seconds) {
+  const id = norm(identifier);
+  if (!id) return;
+  db.prepare(
+    `INSERT INTO playtime (identifier, name, seconds, last_seen)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(identifier) DO UPDATE SET
+       seconds = playtime.seconds + excluded.seconds,
+       name = CASE WHEN excluded.name <> '' THEN excluded.name ELSE playtime.name END,
+       last_seen = excluded.last_seen`,
+  ).run(id, String(name || '').slice(0, 100), Math.max(0, seconds | 0), Date.now());
+}
+
+/** Top players by total playtime. */
+function topPlaytime(limit = 10) {
+  return db
+    .prepare('SELECT identifier, name, seconds FROM playtime ORDER BY seconds DESC LIMIT ?')
+    .all(Math.min(Math.max(1, limit | 0), 25))
+    .map((r) => ({ identifier: r.identifier, name: r.name, seconds: r.seconds }));
+}
+
+/** Look up one player's total by (case-insensitive) name. */
+function findPlaytime(name) {
+  const n = norm(name);
+  if (!n) return null;
+  const r = db.prepare('SELECT identifier, name, seconds FROM playtime WHERE LOWER(name) = ? ORDER BY seconds DESC LIMIT 1').get(n);
+  return r ? { identifier: r.identifier, name: r.name, seconds: r.seconds } : null;
+}
 
 /** Add or update a whitelist entry for a member. */
 function addWhitelist(guildId, userId, identifier, addedBy) {
@@ -71,4 +112,13 @@ function isIdentifierWhitelisted(identifier) {
   return Boolean(db.prepare('SELECT 1 FROM whitelist WHERE identifier = ? LIMIT 1').get(id));
 }
 
-module.exports = { addWhitelist, removeWhitelist, listWhitelist, countWhitelist, isIdentifierWhitelisted };
+module.exports = {
+  addWhitelist,
+  removeWhitelist,
+  listWhitelist,
+  countWhitelist,
+  isIdentifierWhitelisted,
+  addPlaytime,
+  topPlaytime,
+  findPlaytime,
+};

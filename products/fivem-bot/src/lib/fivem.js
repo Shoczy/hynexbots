@@ -45,7 +45,14 @@ async function queryServer(host) {
   if (!dynamic && !players) return { online: false, configured: true };
 
   const list = Array.isArray(players)
-    ? players.map((p) => ({ id: p.id, name: String(p.name || 'Unknown'), ping: p.ping })).slice(0, 1000)
+    ? players
+        .map((p) => ({
+          id: p.id,
+          name: String(p.name || 'Unknown'),
+          ping: p.ping,
+          identifiers: Array.isArray(p.identifiers) ? p.identifiers.map(String) : [],
+        }))
+        .slice(0, 1000)
     : [];
 
   return {

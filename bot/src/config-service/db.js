@@ -245,6 +245,15 @@ function fivemDefaults() {
       times: [], // ['04:00','16:00'] — 24h server-local restart times
       warnMinutes: [15, 5, 1], // countdown warnings before each restart
     },
+    // Server-down alerts: poll the server and ping a role when it goes offline.
+    monitor: {
+      enabled: false,
+      channelId: '', // where the down/recovery alert is posted
+      pingRoleId: '', // optional role pinged when the server goes down
+      downChecks: 2, // consecutive failed polls before alerting (avoids flapping)
+    },
+    // Playtime tracking: accumulate time per in-game identifier for a leaderboard.
+    playtime: { enabled: false },
   };
 }
 

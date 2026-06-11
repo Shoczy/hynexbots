@@ -340,6 +340,13 @@ function sanitizeFivem(f, def) {
       times,
       warnMinutes,
     },
+    monitor: {
+      enabled: Boolean(i.monitor?.enabled),
+      channelId: snowflake(i.monitor?.channelId),
+      pingRoleId: snowflake(i.monitor?.pingRoleId),
+      downChecks: int(i.monitor?.downChecks, 1, 10, def.monitor.downChecks),
+    },
+    playtime: { enabled: Boolean(i.playtime?.enabled) },
   };
 }
 
