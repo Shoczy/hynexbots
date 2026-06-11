@@ -425,6 +425,12 @@ function migrateLegacy(stored) {
     out.messages = { ...m };
     if (m.welcome && typeof m.welcome === 'object') out.messages.welcome = seed(m.welcome, legacyMessageBlocks(m.welcome));
     if (m.leave && typeof m.leave === 'object') out.messages.leave = seed(m.leave, legacyMessageBlocks(m.leave));
+    if (Array.isArray(m.autoresponses)) {
+      out.messages.autoresponses = m.autoresponses.map((ar) => {
+        if (!ar || typeof ar !== 'object' || !ar.reply) return ar;
+        return seed(ar, [{ id: crypto.randomUUID(), type: 'text', content: String(ar.reply) }]);
+      });
+    }
   }
   if (stored.verification && typeof stored.verification === 'object') {
     const v = stored.verification;

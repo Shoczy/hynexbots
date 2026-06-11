@@ -3,6 +3,7 @@
 const { Events } = require('discord.js');
 const { handleMessage } = require('../automod');
 const { handlePrefix } = require('../prefix');
+const { handleAutoresponders } = require('../autoresponder');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -12,7 +13,9 @@ module.exports = {
       // Auto-mod first — if it removed the message, don't run it as a command.
       const acted = await handleMessage(message);
       if (acted) return;
-      await handlePrefix(message);
+      // Prefix commands next; if it wasn't one, try the auto-responder.
+      if (await handlePrefix(message)) return;
+      await handleAutoresponders(message);
     } catch (e) {
       console.error('messageCreate handler error:', e);
     }

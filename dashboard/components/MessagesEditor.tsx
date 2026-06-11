@@ -57,6 +57,7 @@ export function MessagesEditor({
       <Autoresponders
         items={value.autoresponses}
         onChange={(autoresponses) => onChange({ ...value, autoresponses })}
+        botName={botName}
       />
 
       <Card title="Auto-roles" desc="Roles automatically given to every member when they join.">
@@ -145,11 +146,11 @@ function BlockEditor({
 }
 
 /* ── Autoresponders ──────────────────────────────── */
-function Autoresponders({ items, onChange }: { items: AutoResponse[]; onChange: (x: AutoResponse[]) => void }) {
+function Autoresponders({ items, onChange, botName }: { items: AutoResponse[]; onChange: (x: AutoResponse[]) => void; botName: string }) {
   const add = () =>
     onChange([
       ...items,
-      { id: crypto.randomUUID(), trigger: '', match: 'contains', reply: '', enabled: true },
+      { id: crypto.randomUUID(), trigger: '', match: 'contains', enabled: true, v2: emptyV2Message() },
     ]);
   const update = (id: string, patch: Partial<AutoResponse>) =>
     onChange(items.map((it) => (it.id === id ? { ...it, ...patch } : it)));
@@ -203,12 +204,14 @@ function Autoresponders({ items, onChange }: { items: AutoResponse[]; onChange: 
                 </button>
               </div>
             </div>
-            <textarea
-              className="input mt-3 min-h-[60px] resize-y"
-              placeholder="…reply with this. Supports variables."
-              value={it.reply}
-              onChange={(e) => update(it.id, { reply: e.target.value })}
-            />
+            <div className="mt-3">
+              <BlockBuilder
+                value={it.v2 ?? emptyV2Message()}
+                onChange={(v2) => update(it.id, { v2 })}
+                botName={botName}
+                variables={VAR_TOKENS}
+              />
+            </div>
           </div>
         ))}
       </div>

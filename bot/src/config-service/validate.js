@@ -87,14 +87,14 @@ function sanitizeAutoresponses(list) {
   for (const raw of list.slice(0, MAX_AUTORESPONSES)) {
     if (!raw || typeof raw !== 'object') continue;
     const trigger = str(raw.trigger, 100, '').trim();
-    const reply = str(raw.reply, 2000, '').trim();
-    if (!trigger || !reply) continue; // drop incomplete rows
+    const v2 = sanitizeBlocks(raw.v2);
+    if (!trigger || !v2.blocks.length) continue; // need a trigger and a reply body
     out.push({
-      id: /^[\w-]{1,40}$/.test(String(raw.id || '')) ? String(raw.id) : crypto.randomUUID(),
+      id: genId(raw.id),
       trigger,
       match: MATCH_MODES.includes(raw.match) ? raw.match : 'contains',
-      reply,
       enabled: raw.enabled === undefined ? true : Boolean(raw.enabled),
+      v2,
     });
   }
   return out;

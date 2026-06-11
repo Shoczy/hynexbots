@@ -22,8 +22,9 @@ export type AutoResponse = {
   id: string;
   trigger: string;
   match: string;
-  reply: string;
   enabled: boolean;
+  /** The reply body, designed in the block builder. */
+  v2?: V2Message;
 };
 
 export type CommandEmbed = {
