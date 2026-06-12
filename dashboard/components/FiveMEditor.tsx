@@ -89,6 +89,40 @@ export function FiveMEditor({
               onChange={(v) => set('whitelist', { logChannelId: v })}
               types={CHANNEL_TYPES.text}
             />
+
+            <div className="rounded-xl border border-ink-700 bg-ink-900/40 p-4">
+              <Row
+                label="Self-serve applications"
+                hint="Members apply with a button; staff approve or deny. Approving grants the whitelist role and saves their identifier automatically."
+                checked={value.whitelist.application.enabled}
+                onChange={(v) => set('whitelist', { application: { ...value.whitelist.application, enabled: v } })}
+              >
+                <div className="space-y-3">
+                  <ChannelField
+                    label="Apply panel channel"
+                    hint="Where the public “Apply for whitelist” button is posted."
+                    value={value.whitelist.application.panelChannelId}
+                    onChange={(v) => set('whitelist', { application: { ...value.whitelist.application, panelChannelId: v } })}
+                    types={CHANNEL_TYPES.text}
+                  />
+                  <ChannelField
+                    label="Review channel (staff)"
+                    hint="Where submitted applications appear for staff to approve or deny."
+                    value={value.whitelist.application.reviewChannelId}
+                    onChange={(v) => set('whitelist', { application: { ...value.whitelist.application, reviewChannelId: v } })}
+                    types={CHANNEL_TYPES.text}
+                  />
+                  {appId && (
+                    <SendAction
+                      appId={appId}
+                      action="fivem_post_whitelist_panel"
+                      label="Post the apply panel now"
+                      hint="Posts the “Apply for whitelist” panel to the channel above. Save changes first."
+                    />
+                  )}
+                </div>
+              </Row>
+            </div>
           </div>
         </Row>
 

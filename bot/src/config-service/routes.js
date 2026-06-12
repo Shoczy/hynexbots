@@ -21,6 +21,7 @@ const DISPATCH_ACTIONS = {
   welcome_test: { module: 'welcome', tab: 'messages' },
   fivem_post_status: { module: 'fivem', tab: 'fivem' },
   fivem_announce_restart: { module: 'fivem', tab: 'fivem' },
+  fivem_post_whitelist_panel: { module: 'fivem', tab: 'fivem' },
 };
 
 /** Clamp/whitelist a dispatch payload to just what each action accepts. */
@@ -51,6 +52,9 @@ function dispatchBlocker(action, s) {
     if (!f.status?.channelId) return 'no_status_channel';
   } else if (action === 'fivem_announce_restart') {
     if (!f.restarts?.channelId) return 'no_restart_channel';
+  } else if (action === 'fivem_post_whitelist_panel') {
+    if (!f.whitelist?.enabled || !f.whitelist?.application?.enabled) return 'whitelist_app_off';
+    if (!f.whitelist?.application?.panelChannelId) return 'no_panel_channel';
   }
   return null;
 }

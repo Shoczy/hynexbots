@@ -328,6 +328,11 @@ function sanitizeFivem(f, def) {
       enabled: Boolean(wl.enabled),
       roleId: snowflake(wl.roleId),
       logChannelId: snowflake(wl.logChannelId),
+      application: {
+        enabled: Boolean(wl.application?.enabled),
+        panelChannelId: snowflake(wl.application?.panelChannelId),
+        reviewChannelId: snowflake(wl.application?.reviewChannelId),
+      },
     },
     reports: {
       enabled: Boolean(rp.enabled),

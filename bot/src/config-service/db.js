@@ -233,6 +233,13 @@ function fivemDefaults() {
       enabled: false,
       roleId: '', // Discord role granted to whitelisted members
       logChannelId: '', // optional: where add/remove actions are logged
+      // Self-serve whitelist application: members apply via a panel button →
+      // staff approve/deny → role + identifier stored automatically.
+      application: {
+        enabled: false,
+        panelChannelId: '', // where the "Apply for whitelist" panel is posted
+        reviewChannelId: '', // where applications land for staff to approve/deny
+      },
     },
     reports: {
       enabled: false,

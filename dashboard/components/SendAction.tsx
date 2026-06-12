@@ -18,6 +18,8 @@ const ERRORS: Record<string, string> = {
   no_server_host: 'Set your FiveM server address and save first.',
   no_status_channel: 'Set a status channel and save first.',
   no_restart_channel: 'Set a restart announcement channel and save first.',
+  whitelist_app_off: 'Enable Whitelist and its self-serve applications first.',
+  no_panel_channel: 'Set the apply panel channel and save first.',
 };
 
 /**

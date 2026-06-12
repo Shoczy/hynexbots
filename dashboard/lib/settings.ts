@@ -144,7 +144,12 @@ export type AntiNukeSettings = {
 export type FiveMSettings = {
   server: { host: string; name: string };
   status: { enabled: boolean; channelId: string; refreshSec: number };
-  whitelist: { enabled: boolean; roleId: string; logChannelId: string };
+  whitelist: {
+    enabled: boolean;
+    roleId: string;
+    logChannelId: string;
+    application: { enabled: boolean; panelChannelId: string; reviewChannelId: string };
+  };
   reports: { enabled: boolean; channelId: string; pingRoleId: string };
   restarts: { enabled: boolean; channelId: string; times: string[]; warnMinutes: number[] };
   monitor: { enabled: boolean; channelId: string; pingRoleId: string; downChecks: number };
@@ -239,7 +244,7 @@ export function defaultFiveM(): FiveMSettings {
   return {
     server: { host: '', name: '' },
     status: { enabled: false, channelId: '', refreshSec: 60 },
-    whitelist: { enabled: false, roleId: '', logChannelId: '' },
+    whitelist: { enabled: false, roleId: '', logChannelId: '', application: { enabled: false, panelChannelId: '', reviewChannelId: '' } },
     reports: { enabled: false, channelId: '', pingRoleId: '' },
     restarts: { enabled: false, channelId: '', times: [], warnMinutes: [15, 5, 1] },
     monitor: { enabled: false, channelId: '', pingRoleId: '', downChecks: 2 },

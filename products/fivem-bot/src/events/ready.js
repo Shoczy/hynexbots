@@ -10,6 +10,7 @@ const restartScheduler = require('../fivem/restartScheduler');
 const intake = require('../fivem/intake');
 const monitor = require('../fivem/monitor');
 const playtime = require('../fivem/playtime');
+const application = require('../fivem/application');
 
 /** Run a dashboard-dispatched action (see config-service DISPATCH_ACTIONS). */
 async function runDashboardCommand(client, action, payload) {
@@ -18,6 +19,10 @@ async function runDashboardCommand(client, action, payload) {
   } else if (action === 'fivem_announce_restart') {
     if (!cfg('fivem.restarts.channelId', '')) return;
     await restartScheduler.manualAnnounce(Math.max(0, Number(payload?.minutes) || 0));
+  } else if (action === 'fivem_post_whitelist_panel') {
+    const chId = cfg('fivem.whitelist.application.panelChannelId', '');
+    const ch = chId ? await client.channels.fetch(chId).catch(() => null) : null;
+    if (ch?.isTextBased?.()) await ch.send(application.panelPayload()).catch(() => {});
   } else if (action === 'welcome_test') {
     if (!cfg('modules.welcome', false)) return;
     const block = cfg('messages.welcome', null);
