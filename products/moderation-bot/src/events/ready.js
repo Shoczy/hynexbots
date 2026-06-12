@@ -6,6 +6,8 @@ const { ConfigClient } = require('../lib/configClient');
 const { setSettings, cfg } = require('../lib/state');
 const { panelPayload } = require('../verification');
 const { buildMessagePayload } = require('../lib/messages');
+const temproles = require('../temproles');
+const announcements = require('../announcements');
 
 /** Post a payload to a globally-unique channel id, if it's reachable. */
 async function postToChannel(client, channelId, payload) {
@@ -95,6 +97,11 @@ module.exports = {
     configClient.startCommands((action) => runDashboardCommand(client, action));
 
     await applyNickname(client);
+
+    // Auto-remove expired temp-roles (sweeps every minute, survives restarts).
+    temproles.startSweeper(client);
+    // Scheduled announcements (checked every minute).
+    announcements.start(client);
 
     // Report each guild's roles & channels so the dashboard shows real pick-lists.
     for (const guild of client.guilds.cache.values()) {

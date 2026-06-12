@@ -2,11 +2,12 @@
 
 import { useState, type ReactNode } from 'react';
 import { Field, Toggle } from './ui';
-import { Card, RolesField } from './settingsKit';
+import { Card, RolesField, ChannelField, NumInput } from './settingsKit';
+import { CHANNEL_TYPES } from '@/lib/guildContext';
 import { BlockBuilder } from './BlockBuilder';
 import { SendAction } from './SendAction';
 import { emptyV2Message } from '@/lib/blocks';
-import { MATCH_MODES, VARIABLES, type Settings, type MessageBlock, type AutoResponse } from '@/lib/settings';
+import { MATCH_MODES, VARIABLES, type Settings, type MessageBlock, type AutoResponse, type Announcement } from '@/lib/settings';
 
 // Bare variable names (no braces) for the block builder's insert chips.
 const VAR_TOKENS = VARIABLES.map((v) => v.token.replace(/[{}]/g, ''));
@@ -57,6 +58,12 @@ export function MessagesEditor({
       <Autoresponders
         items={value.autoresponses}
         onChange={(autoresponses) => onChange({ ...value, autoresponses })}
+        botName={botName}
+      />
+
+      <ScheduledAnnouncements
+        items={value.announcements ?? []}
+        onChange={(announcements) => onChange({ ...value, announcements })}
         botName={botName}
       />
 
@@ -211,6 +218,74 @@ function Autoresponders({ items, onChange, botName }: { items: AutoResponse[]; o
                 botName={botName}
                 variables={VAR_TOKENS}
               />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ── Scheduled announcements ──────────────────────── */
+function ScheduledAnnouncements({ items, onChange, botName }: { items: Announcement[]; onChange: (x: Announcement[]) => void; botName: string }) {
+  const add = () =>
+    onChange([...items, { id: crypto.randomUUID(), enabled: true, channelId: '', everyMinutes: 360, v2: emptyV2Message() }]);
+  const update = (id: string, patch: Partial<Announcement>) => onChange(items.map((it) => (it.id === id ? { ...it, ...patch } : it)));
+  const remove = (id: string) => onChange(items.filter((it) => it.id !== id));
+
+  return (
+    <section className="card p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className="font-display text-lg font-semibold">Scheduled announcements</h3>
+          <p className="mt-0.5 text-sm text-mist-muted">Post a message to a channel automatically on a repeating timer — rules reminders, events, tips.</p>
+        </div>
+        <button type="button" onClick={add} className="btn-ghost" disabled={items.length >= 20}>
+          + Add
+        </button>
+      </div>
+
+      <div className="mt-5 space-y-4">
+        {items.length === 0 && (
+          <p className="rounded-xl border border-dashed border-ink-700 px-4 py-6 text-center text-sm text-mist-muted">
+            No scheduled announcements yet. Add one to get started.
+          </p>
+        )}
+        {items.map((it) => (
+          <div key={it.id} className="rounded-xl border border-ink-700 bg-ink-900/40 p-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => update(it.id, { enabled: !it.enabled })}
+                className={`text-xs font-medium ${it.enabled ? 'text-emerald-300' : 'text-mist-faint'}`}
+              >
+                {it.enabled ? '● on' : '○ off'}
+              </button>
+              <button type="button" onClick={() => remove(it.id)} className="ml-auto text-mist-faint hover:text-red-300" title="Remove">
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <ChannelField
+                label="Channel"
+                hint="Where this announcement is posted."
+                types={CHANNEL_TYPES.text}
+                value={it.channelId}
+                onChange={(channelId) => update(it.id, { channelId })}
+              />
+              <div>
+                <span className="label">Repeat every</span>
+                <div className="mt-1 flex items-center gap-2 text-sm text-mist-muted">
+                  <NumInput value={it.everyMinutes} min={5} max={43200} width="w-24" onChange={(everyMinutes) => update(it.id, { everyMinutes })} />
+                  <span>minutes</span>
+                </div>
+                <p className="mt-1 text-[11px] text-mist-faint">e.g. 360 = every 6h · 1440 = daily.</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <BlockBuilder value={it.v2 ?? emptyV2Message()} onChange={(v2) => update(it.id, { v2 })} botName={botName} variables={VAR_TOKENS} />
             </div>
           </div>
         ))}

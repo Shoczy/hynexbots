@@ -100,6 +100,28 @@ function sanitizeAutoresponses(list) {
   return out;
 }
 
+const MAX_ANNOUNCEMENTS = 20;
+
+/** Sanitize scheduled announcements: a channel + interval + block-builder body. */
+function sanitizeAnnouncements(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const raw of list.slice(0, MAX_ANNOUNCEMENTS)) {
+    if (!raw || typeof raw !== 'object') continue;
+    const channelId = snowflake(raw.channelId);
+    const v2 = sanitizeBlocks(raw.v2);
+    if (!channelId || !v2.blocks.length) continue; // needs a target + a body
+    out.push({
+      id: genId(raw.id),
+      enabled: raw.enabled === undefined ? true : Boolean(raw.enabled),
+      channelId,
+      everyMinutes: int(raw.everyMinutes, 5, 43200, 360), // 5 min … 30 days (default 6h)
+      v2,
+    });
+  }
+  return out;
+}
+
 /**
  * Sanitize an optional per-command custom embed override. Returns a clean embed
  * object, or null if nothing usable was given (so we don't store empty blocks).
@@ -443,6 +465,7 @@ function sanitizeSettings(input, features = null) {
     welcome: sanitizeMessageBlock(msg.welcome, d.messages.welcome),
     leave: sanitizeMessageBlock(msg.leave, d.messages.leave),
     autoresponses: sanitizeAutoresponses(msg.autoresponses),
+    announcements: sanitizeAnnouncements(msg.announcements),
     autoRoleIds: Array.isArray(msg.autoRoleIds)
       ? [...new Set(msg.autoRoleIds.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES)
       : [],

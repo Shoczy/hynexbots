@@ -41,7 +41,35 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_modmail_thread ON modmail (thread_id);
+
+  -- Temp-roles: a role to remove from a member at expires_at.
+  CREATE TABLE IF NOT EXISTS temproles (
+    id         TEXT PRIMARY KEY,
+    guild_id   TEXT NOT NULL,
+    user_id    TEXT NOT NULL,
+    role_id    TEXT NOT NULL,
+    expires_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_temprole_exp ON temproles (expires_at);
 `);
+
+/** Schedule a role to be removed at `expiresAt` (replaces any existing one for the same user+role). */
+function addTempRole(guildId, userId, roleId, expiresAt) {
+  db.prepare('DELETE FROM temproles WHERE guild_id = ? AND user_id = ? AND role_id = ?').run(String(guildId), String(userId), String(roleId));
+  db.prepare('INSERT INTO temproles (id, guild_id, user_id, role_id, expires_at) VALUES (?, ?, ?, ?, ?)').run(
+    crypto.randomUUID(),
+    String(guildId),
+    String(userId),
+    String(roleId),
+    expiresAt,
+  );
+}
+const dueTempRoles = (now = Date.now()) => db.prepare('SELECT * FROM temproles WHERE expires_at <= ?').all(now);
+const removeTempRoleRow = (id) => db.prepare('DELETE FROM temproles WHERE id = ?').run(String(id));
+const removeTempRole = (guildId, userId, roleId) =>
+  Number(db.prepare('DELETE FROM temproles WHERE guild_id = ? AND user_id = ? AND role_id = ?').run(String(guildId), String(userId), String(roleId)).changes || 0);
+const listTempRoles = (guildId, userId) =>
+  db.prepare('SELECT * FROM temproles WHERE guild_id = ? AND user_id = ? ORDER BY expires_at ASC').all(String(guildId), String(userId));
 
 /** Map a member to their open modmail thread (upsert). */
 function setModmailThread(userId, threadId, guildId) {
@@ -100,4 +128,9 @@ module.exports = {
   getModmailThread,
   getModmailUser,
   closeModmail,
+  addTempRole,
+  dueTempRoles,
+  removeTempRoleRow,
+  removeTempRole,
+  listTempRoles,
 };

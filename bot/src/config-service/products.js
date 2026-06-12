@@ -33,7 +33,7 @@ const MODULE_TABS = {
 // list EVERY command the matching product bot actually ships, or the dashboard
 // can't expose it and saves would drop its per-command settings.
 const COMMAND_GROUPS = [
-  { id: 'moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode'] },
+  { id: 'moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode', 'temprole'] },
   { id: 'verification', commands: ['verify-panel'] },
   { id: 'reactionroles', commands: ['roles-panel'] },
   { id: 'leveling', commands: ['rank', 'levels', 'setxp'] },

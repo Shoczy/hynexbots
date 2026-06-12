@@ -195,7 +195,8 @@ function defaultSettings() {
     messages: {
       welcome: messageBlock(),
       leave: messageBlock(),
-      autoresponses: [], // [{ id, trigger, match, reply, enabled }]
+      autoresponses: [], // [{ id, trigger, match, v2, enabled }]
+      announcements: [], // [{ id, enabled, channelId, everyMinutes, v2 }] — scheduled posts
       autoRoleIds: [], // roles auto-assigned to members on join
     },
     // Per-command permissions: { [command]: { enabled, roles[] } }.

@@ -11,6 +11,7 @@ const intake = require('../fivem/intake');
 const monitor = require('../fivem/monitor');
 const playtime = require('../fivem/playtime');
 const application = require('../fivem/application');
+const announcements = require('../announcements');
 
 /** Run a dashboard-dispatched action (see config-service DISPATCH_ACTIONS). */
 async function runDashboardCommand(client, action, payload) {
@@ -87,6 +88,7 @@ module.exports = {
     intake.start(client);
     monitor.start(client);
     playtime.start();
+    announcements.start(client);
 
     // Execute actions the customer triggers from the dashboard (post status,
     // announce a restart, …) without needing to run a slash command.

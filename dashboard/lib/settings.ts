@@ -27,6 +27,15 @@ export type AutoResponse = {
   v2?: V2Message;
 };
 
+export type Announcement = {
+  id: string;
+  enabled: boolean;
+  channelId: string;
+  everyMinutes: number;
+  /** The message body, designed in the block builder. */
+  v2?: V2Message;
+};
+
 export type CommandEmbed = {
   enabled: boolean;
   title: string;
@@ -308,7 +317,7 @@ export function defaultLeveling(): LevelingSettings {
 export type Settings = {
   basics: { prefix: string; embedColor: string; nickname: string; language: string; logChannelId: string };
   modules: Record<string, boolean>;
-  messages: { welcome: MessageBlock; leave: MessageBlock; autoresponses: AutoResponse[]; autoRoleIds: string[] };
+  messages: { welcome: MessageBlock; leave: MessageBlock; autoresponses: AutoResponse[]; announcements: Announcement[]; autoRoleIds: string[] };
   commands: Record<string, CommandPerm>;
   moderation: ModerationSettings;
   verification: VerificationSettings;
@@ -349,7 +358,7 @@ export const MATCH_MODES: [string, string][] = [
 // Must list EVERY command each product bot ships (kept in sync with the backend
 // COMMAND_GROUPS in bot/src/config-service/products.js).
 export const COMMAND_GROUPS: { module: string; label: string; commands: string[] }[] = [
-  { module: 'moderation', label: 'Moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode'] },
+  { module: 'moderation', label: 'Moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode', 'temprole'] },
   { module: 'verification', label: 'Verification', commands: ['verify-panel'] },
   { module: 'reactionroles', label: 'Reaction Roles', commands: ['roles-panel'] },
   { module: 'leveling', label: 'Leveling', commands: ['rank', 'levels', 'setxp'] },
