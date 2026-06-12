@@ -113,6 +113,7 @@ export type ModerationSettings = {
   };
   roles: { muteRoleId: string; modRoleIds: string[] };
   dmOnPunish: boolean;
+  banAppeal: { enabled: boolean; channelId: string };
 };
 
 // Verification-gate tailored settings (a button members click to gain access).
@@ -237,6 +238,7 @@ export function defaultModeration(): ModerationSettings {
     },
     roles: { muteRoleId: '', modRoleIds: [] },
     dmOnPunish: false,
+    banAppeal: { enabled: false, channelId: '' },
   };
 }
 

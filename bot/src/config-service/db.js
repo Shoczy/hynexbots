@@ -344,6 +344,8 @@ function moderationDefaults() {
       modRoleIds: [],
     },
     dmOnPunish: false, // DM the member the reason when they're warned/muted/kicked/banned
+    // Ban appeals: DM banned members an "Appeal" button → staff review channel.
+    banAppeal: { enabled: false, channelId: '' },
   };
 }
 

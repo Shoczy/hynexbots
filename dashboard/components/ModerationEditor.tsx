@@ -197,13 +197,27 @@ export function ModerationEditor({
       </Card>
 
       {/* Notifications */}
-      <Card title="Notifications" desc="How the bot communicates moderation actions.">
+      <Card title="Notifications & appeals" desc="How the bot communicates moderation actions.">
         <Row
           label="DM members on action"
           hint="Send the member a DM with the reason when they're warned, muted, kicked or banned."
           checked={value.dmOnPunish}
           onChange={(dmOnPunish) => onChange({ ...value, dmOnPunish })}
         />
+        <Row
+          label="Ban appeals"
+          hint="Banned members get a DM with an “Appeal” button. Appeals land in a staff channel where one click can approve & unban."
+          checked={value.banAppeal.enabled}
+          onChange={(v) => onChange({ ...value, banAppeal: { ...value.banAppeal, enabled: v } })}
+        >
+          <ChannelField
+            label="Appeal review channel"
+            hint="Where submitted appeals appear for staff to approve or deny."
+            types={CHANNEL_TYPES.text}
+            value={value.banAppeal.channelId}
+            onChange={(channelId) => onChange({ ...value, banAppeal: { ...value.banAppeal, channelId } })}
+          />
+        </Row>
       </Card>
 
       {/* Roles */}

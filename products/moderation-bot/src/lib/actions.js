@@ -3,6 +3,7 @@
 const { mod } = require('./state');
 const { make, ok, err, COLORS } = require('./embeds');
 const { commandReply } = require('./commandEmbed');
+const { sendBanAppealDM } = require('../appeal');
 const { logModAction } = require('./log');
 const store = require('./store');
 
@@ -41,6 +42,8 @@ function actionable(guild, target) {
 async function doBan(guild, targetUser, { moderator, reason = 'No reason provided', deleteDays = 0 } = {}) {
   const member = guild.members.cache.get(targetUser.id);
   if (member && !actionable(guild, member)) return { ok: false, embed: err('I can\'t ban that member (role hierarchy).') };
+  // DM the appeal option while a DM channel is still reachable (before the ban).
+  await sendBanAppealDM(targetUser, guild, reason);
   try {
     await guild.bans.create(targetUser.id, {
       reason: `${reason} — by ${moderator?.tag || 'system'}`,

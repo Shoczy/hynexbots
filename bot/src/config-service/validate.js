@@ -215,6 +215,10 @@ function sanitizeModeration(m, def) {
         : [],
     },
     dmOnPunish: Boolean(i.dmOnPunish),
+    banAppeal: {
+      enabled: Boolean(i.banAppeal?.enabled),
+      channelId: snowflake(i.banAppeal?.channelId),
+    },
     autoSlowmode: {
       enabled: Boolean(as.enabled),
       messages: int(as.messages, 2, 500, def.autoSlowmode.messages),
