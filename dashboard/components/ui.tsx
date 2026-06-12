@@ -1,6 +1,50 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+
+/**
+ * Small "i" help icon: shows its text on hover (desktop) and toggles on click
+ * (so it works on touch too). Used next to field labels so the UI stays clean
+ * while every setting still explains itself.
+ */
+export function InfoTip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  if (!text) return null;
+  return (
+    <span className="relative inline-flex" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        aria-label="More info"
+        className="grid h-4 w-4 place-items-center rounded-full border border-ink-600 text-[10px] font-semibold leading-none text-mist-faint transition-colors hover:border-accent/60 hover:text-mist"
+      >
+        i
+      </button>
+      {open && (
+        <span
+          role="tooltip"
+          className="absolute bottom-full left-1/2 z-50 mb-2 w-60 max-w-[70vw] -translate-x-1/2 rounded-lg border border-ink-600 bg-ink-900 px-3 py-2 text-xs font-normal normal-case leading-relaxed tracking-normal text-mist-muted shadow-xl shadow-black/50"
+        >
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** A field label with an optional "i" info tooltip beside it. */
+export function FieldLabel({ label, hint }: { label: string; hint?: string }) {
+  return (
+    <span className="label inline-flex items-center gap-1.5">
+      {label}
+      {hint && <InfoTip text={hint} />}
+    </span>
+  );
+}
 
 export function Logo({ className = '' }: { className?: string }) {
   return (
@@ -70,9 +114,10 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div>
-      <label className="label">{label}</label>
+      <div className="mb-1">
+        <FieldLabel label={label} hint={hint} />
+      </div>
       {children}
-      {hint && <p className="mt-1.5 text-xs text-mist-muted">{hint}</p>}
     </div>
   );
 }

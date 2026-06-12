@@ -3,7 +3,7 @@
 // Shared building blocks for the per-product settings editors
 // (ModerationEditor, AntiNukeEditor, FiveMEditor, …).
 import { useState, useRef, useEffect, type ReactNode } from 'react';
-import { Toggle } from './ui';
+import { Toggle, FieldLabel, InfoTip } from './ui';
 import { useGuild, type GuildRole } from '@/lib/guildContext';
 
 export const clamp = (n: number, min: number, max: number) =>
@@ -38,9 +38,9 @@ export function Row({
   return (
     <div className="rounded-xl border border-ink-700 bg-ink-900/40 px-4 py-3.5">
       <div className="flex items-center justify-between gap-4">
-        <span>
-          <span className="block text-sm font-medium text-mist">{label}</span>
-          {hint && <span className="mt-0.5 block text-xs text-mist-muted">{hint}</span>}
+        <span className="flex items-center gap-1.5 text-sm font-medium text-mist">
+          {label}
+          {hint && <InfoTip text={hint} />}
         </span>
         <Toggle label="" checked={checked} onChange={onChange} />
       </div>
@@ -102,7 +102,7 @@ export function TextField({
 }) {
   return (
     <div>
-      <span className="label">{label}</span>
+      <FieldLabel label={label} hint={hint} />
       <input
         className={`input mt-1 ${mono ? 'font-mono' : ''}`}
         value={value}
@@ -110,7 +110,6 @@ export function TextField({
         maxLength={maxLength}
         onChange={(e) => onChange(e.target.value)}
       />
-      {hint && <p className="mt-1.5 text-xs text-mist-muted">{hint}</p>}
     </div>
   );
 }
@@ -406,9 +405,8 @@ export function ChannelSelect({
 export function RolesField({ label, hint, value, onChange }: { label: string; hint?: string; value: string[]; onChange: (ids: string[]) => void }) {
   return (
     <div>
-      <span className="label">{label}</span>
-      {hint && <p className="mb-2 mt-0.5 text-xs text-mist-muted">{hint}</p>}
-      <div className={hint ? '' : 'mt-1'}>
+      <FieldLabel label={label} hint={hint} />
+      <div className="mt-1">
         <RolePicker value={value} onChange={onChange} />
       </div>
     </div>
@@ -418,11 +416,10 @@ export function RolesField({ label, hint, value, onChange }: { label: string; hi
 export function RoleField({ label, hint, value, onChange }: { label: string; hint?: string; value: string; onChange: (id: string) => void }) {
   return (
     <div>
-      <span className="label">{label}</span>
+      <FieldLabel label={label} hint={hint} />
       <div className="mt-1">
         <RoleSelect value={value} onChange={onChange} />
       </div>
-      {hint && <p className="mt-1.5 text-xs text-mist-muted">{hint}</p>}
     </div>
   );
 }
@@ -442,11 +439,10 @@ export function ChannelField({
 }) {
   return (
     <div>
-      <span className="label">{label}</span>
+      <FieldLabel label={label} hint={hint} />
       <div className="mt-1">
         <ChannelSelect value={value} onChange={onChange} types={types} />
       </div>
-      {hint && <p className="mt-1.5 text-xs text-mist-muted">{hint}</p>}
     </div>
   );
 }
