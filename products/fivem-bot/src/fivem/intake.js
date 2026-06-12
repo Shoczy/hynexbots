@@ -5,6 +5,7 @@ const config = require('../config');
 const { fivem } = require('../lib/state');
 const { v2, COLORS } = require('../lib/embeds');
 const store = require('../lib/store');
+const chatBridge = require('./chatBridge');
 
 /**
  * Optional HTTP intake the customer's FiveM server talks to. Two endpoints,
@@ -47,6 +48,20 @@ const json = (res, code, obj) => {
   res.end(JSON.stringify(obj));
 };
 
+/** In-game chat → Discord bridge channel (no pings). */
+async function postChat({ player, message }) {
+  if (!chatBridge.enabled()) return false;
+  const channel = await client.channels.fetch(chatBridge.channelId()).catch(() => null);
+  if (!channel || !channel.isTextBased?.()) return false;
+  const name = String(player || 'Player').slice(0, 80);
+  const text = String(message || '').slice(0, 300);
+  if (!text) return false;
+  await channel
+    .send({ content: `**${name}:** ${text}`, allowedMentions: { parse: [] } })
+    .catch(() => {});
+  return true;
+}
+
 async function postReport({ player, reason, id }) {
   const rp = fivem().reports;
   if (!rp.enabled || !rp.channelId) return false;
@@ -80,6 +95,21 @@ function handle(req, res) {
       postReport(body).catch(() => {});
       return json(res, 200, { ok: true });
     });
+  }
+
+  // In-game chat → Discord.
+  if (req.method === 'POST' && url.pathname === '/chat') {
+    return readBody(req).then((body) => {
+      postChat(body).catch(() => {});
+      return json(res, 200, { ok: true });
+    });
+  }
+
+  // Discord → in-game: the resource polls this for new messages by timestamp.
+  if (req.method === 'GET' && url.pathname === '/chat/pending') {
+    if (!chatBridge.enabled()) return json(res, 200, { ok: true, messages: [] });
+    const since = url.searchParams.get('since') || 0;
+    return json(res, 200, { ok: true, now: Date.now(), messages: chatBridge.pending(since) });
   }
 
   return json(res, 404, { ok: false, error: 'not_found' });

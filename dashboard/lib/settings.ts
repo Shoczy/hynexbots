@@ -155,6 +155,7 @@ export type FiveMSettings = {
   restarts: { enabled: boolean; channelId: string; times: string[]; warnMinutes: number[] };
   monitor: { enabled: boolean; channelId: string; pingRoleId: string; downChecks: number };
   playtime: { enabled: boolean };
+  chatBridge: { enabled: boolean; channelId: string };
 };
 
 // Leveling-bot tailored settings.
@@ -251,6 +252,7 @@ export function defaultFiveM(): FiveMSettings {
     restarts: { enabled: false, channelId: '', times: [], warnMinutes: [15, 5, 1] },
     monitor: { enabled: false, channelId: '', pingRoleId: '', downChecks: 2 },
     playtime: { enabled: false },
+    chatBridge: { enabled: false, channelId: '' },
   };
 }
 

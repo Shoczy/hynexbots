@@ -356,6 +356,10 @@ function sanitizeFivem(f, def) {
       downChecks: int(i.monitor?.downChecks, 1, 10, def.monitor.downChecks),
     },
     playtime: { enabled: Boolean(i.playtime?.enabled) },
+    chatBridge: {
+      enabled: Boolean(i.chatBridge?.enabled),
+      channelId: snowflake(i.chatBridge?.channelId),
+    },
   };
 }
 

@@ -239,6 +239,27 @@ export function FiveMEditor({
             <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">/playtime-top</code>.
           </p>
         </Row>
+
+        <Row
+          label="In-game ↔ Discord chat bridge"
+          hint="Relays chat both ways between your server and a Discord channel. Requires the Hynex in-game resource (provided)."
+          checked={value.chatBridge.enabled}
+          onChange={(v) => set('chatBridge', { enabled: v })}
+        >
+          <div className="space-y-3">
+            <ChannelField
+              label="Bridge channel"
+              hint="In-game chat appears here, and messages sent here appear in-game."
+              value={value.chatBridge.channelId}
+              onChange={(v) => set('chatBridge', { channelId: v })}
+              types={CHANNEL_TYPES.text}
+            />
+            <p className="text-xs text-mist-muted">
+              Drop the <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">hynex_chat</code> resource onto your server and set its
+              intake URL + secret. Setup steps are in the resource README.
+            </p>
+          </div>
+        </Row>
       </Card>
     </div>
   );
