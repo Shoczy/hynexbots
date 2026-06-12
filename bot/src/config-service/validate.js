@@ -219,6 +219,11 @@ function sanitizeModeration(m, def) {
       enabled: Boolean(i.banAppeal?.enabled),
       channelId: snowflake(i.banAppeal?.channelId),
     },
+    modmail: {
+      enabled: Boolean(i.modmail?.enabled),
+      channelId: snowflake(i.modmail?.channelId),
+      pingRoleId: snowflake(i.modmail?.pingRoleId),
+    },
     autoSlowmode: {
       enabled: Boolean(as.enabled),
       messages: int(as.messages, 2, 500, def.autoSlowmode.messages),

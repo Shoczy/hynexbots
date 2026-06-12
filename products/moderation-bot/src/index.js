@@ -21,6 +21,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent, // privileged — for auto-mod & prefix commands
     GatewayIntentBits.GuildMembers, // privileged — for anti-raid & join/leave logs
     GatewayIntentBits.GuildModeration, // for ban logs
+    GatewayIntentBits.DirectMessages, // for modmail (members DM the bot)
   ],
   partials: [Partials.Channel, Partials.Message, Partials.GuildMember, Partials.User],
 });

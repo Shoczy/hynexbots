@@ -32,7 +32,28 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_warn_guild_user ON warnings (guild_id, user_id);
+
+  -- Modmail: one open staff thread per member who DMs the bot.
+  CREATE TABLE IF NOT EXISTS modmail (
+    user_id    TEXT PRIMARY KEY,
+    thread_id  TEXT NOT NULL,
+    guild_id   TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_modmail_thread ON modmail (thread_id);
 `);
+
+/** Map a member to their open modmail thread (upsert). */
+function setModmailThread(userId, threadId, guildId) {
+  db.prepare(
+    `INSERT INTO modmail (user_id, thread_id, guild_id, created_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET thread_id = excluded.thread_id, guild_id = excluded.guild_id, created_at = excluded.created_at`,
+  ).run(String(userId), String(threadId), String(guildId), Date.now());
+}
+const getModmailThread = (userId) => db.prepare('SELECT thread_id FROM modmail WHERE user_id = ?').get(String(userId))?.thread_id || null;
+const getModmailUser = (threadId) => db.prepare('SELECT user_id FROM modmail WHERE thread_id = ?').get(String(threadId))?.user_id || null;
+const closeModmail = (userId) => db.prepare('DELETE FROM modmail WHERE user_id = ?').run(String(userId));
 
 /** Record a warning. Returns the new row. */
 function addWarning(guildId, userId, modId, reason) {
@@ -70,4 +91,13 @@ function clearWarnings(guildId, userId) {
   return Number(info.changes || 0);
 }
 
-module.exports = { db, addWarning, activeWarnings, clearWarnings };
+module.exports = {
+  db,
+  addWarning,
+  activeWarnings,
+  clearWarnings,
+  setModmailThread,
+  getModmailThread,
+  getModmailUser,
+  closeModmail,
+};

@@ -349,6 +349,8 @@ function moderationDefaults() {
     dmOnPunish: false, // DM the member the reason when they're warned/muted/kicked/banned
     // Ban appeals: DM banned members an "Appeal" button → staff review channel.
     banAppeal: { enabled: false, channelId: '' },
+    // Modmail: members DM the bot → a private staff thread; staff replies relay back.
+    modmail: { enabled: false, channelId: '', pingRoleId: '' },
   };
 }
 

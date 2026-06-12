@@ -218,6 +218,29 @@ export function ModerationEditor({
             onChange={(channelId) => onChange({ ...value, banAppeal: { ...value.banAppeal, channelId } })}
           />
         </Row>
+
+        <Row
+          label="Modmail"
+          hint="Members DM the bot; each conversation opens a private thread in your inbox channel. Staff reply in the thread and it's relayed back to the member. Use // for a private note, =close to close."
+          checked={value.modmail.enabled}
+          onChange={(v) => onChange({ ...value, modmail: { ...value.modmail, enabled: v } })}
+        >
+          <div className="space-y-3">
+            <ChannelField
+              label="Inbox channel"
+              hint="A staff-only channel where modmail threads are created. Members never see it."
+              types={CHANNEL_TYPES.text}
+              value={value.modmail.channelId}
+              onChange={(channelId) => onChange({ ...value, modmail: { ...value.modmail, channelId } })}
+            />
+            <RoleField
+              label="Ping role (optional)"
+              hint="Pinged when a new modmail conversation opens."
+              value={value.modmail.pingRoleId}
+              onChange={(pingRoleId) => onChange({ ...value, modmail: { ...value.modmail, pingRoleId } })}
+            />
+          </div>
+        </Row>
       </Card>
 
       {/* Roles */}

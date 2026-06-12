@@ -12,7 +12,7 @@ const COMMON = ['ViewChannel', 'SendMessages', 'EmbedLinks', 'ReadMessageHistory
 
 const PERMS_BY_TYPE = {
   // Sold as "Security".
-  moderation: [...COMMON, 'KickMembers', 'BanMembers', 'ModerateMembers', 'ManageMessages', 'ManageRoles', 'ManageChannels', 'ManageNicknames', 'ViewAuditLog'],
+  moderation: [...COMMON, 'KickMembers', 'BanMembers', 'ModerateMembers', 'ManageMessages', 'ManageRoles', 'ManageChannels', 'ManageNicknames', 'ViewAuditLog', 'CreatePublicThreads', 'SendMessagesInThreads', 'ManageThreads'],
   // FiveM: ManageRoles for the whitelist role; the rest is messaging.
   fivem: [...COMMON, 'ManageRoles'],
   // Bespoke builds: a broad (but non-Administrator) set covering all systems.
