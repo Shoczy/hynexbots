@@ -51,7 +51,22 @@ db.exec(`
     expires_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_temprole_exp ON temproles (expires_at);
+
+  -- Starboard: maps an original message to its posted star entry.
+  CREATE TABLE IF NOT EXISTS starboard (
+    message_id      TEXT PRIMARY KEY,
+    star_message_id TEXT NOT NULL,
+    count           INTEGER NOT NULL DEFAULT 0
+  );
 `);
+
+const getStar = (messageId) => db.prepare('SELECT star_message_id, count FROM starboard WHERE message_id = ?').get(String(messageId)) || null;
+const setStar = (messageId, starMessageId, count) =>
+  db.prepare(
+    `INSERT INTO starboard (message_id, star_message_id, count) VALUES (?, ?, ?)
+     ON CONFLICT(message_id) DO UPDATE SET star_message_id = excluded.star_message_id, count = excluded.count`,
+  ).run(String(messageId), String(starMessageId), count | 0);
+const deleteStar = (messageId) => db.prepare('DELETE FROM starboard WHERE message_id = ?').run(String(messageId));
 
 /** Schedule a role to be removed at `expiresAt` (replaces any existing one for the same user+role). */
 function addTempRole(guildId, userId, roleId, expiresAt) {
@@ -133,4 +148,7 @@ module.exports = {
   removeTempRoleRow,
   removeTempRole,
   listTempRoles,
+  getStar,
+  setStar,
+  deleteStar,
 };

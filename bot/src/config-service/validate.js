@@ -246,6 +246,12 @@ function sanitizeModeration(m, def) {
       channelId: snowflake(i.modmail?.channelId),
       pingRoleId: snowflake(i.modmail?.pingRoleId),
     },
+    starboard: {
+      enabled: Boolean(i.starboard?.enabled),
+      channelId: snowflake(i.starboard?.channelId),
+      emoji: str(i.starboard?.emoji, 64, '').trim() || '⭐',
+      threshold: int(i.starboard?.threshold, 1, 100, def.starboard.threshold),
+    },
     autoSlowmode: {
       enabled: Boolean(as.enabled),
       messages: int(as.messages, 2, 500, def.autoSlowmode.messages),

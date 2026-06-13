@@ -124,6 +124,7 @@ export type ModerationSettings = {
   dmOnPunish: boolean;
   banAppeal: { enabled: boolean; channelId: string };
   modmail: { enabled: boolean; channelId: string; pingRoleId: string };
+  starboard: { enabled: boolean; channelId: string; emoji: string; threshold: number };
 };
 
 // Verification-gate tailored settings (a button members click to gain access).
@@ -251,6 +252,7 @@ export function defaultModeration(): ModerationSettings {
     dmOnPunish: false,
     banAppeal: { enabled: false, channelId: '' },
     modmail: { enabled: false, channelId: '', pingRoleId: '' },
+    starboard: { enabled: false, channelId: '', emoji: '⭐', threshold: 3 },
   };
 }
 

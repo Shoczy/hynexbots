@@ -352,6 +352,8 @@ function moderationDefaults() {
     banAppeal: { enabled: false, channelId: '' },
     // Modmail: members DM the bot → a private staff thread; staff replies relay back.
     modmail: { enabled: false, channelId: '', pingRoleId: '' },
+    // Starboard: messages that hit `threshold` of `emoji` get reposted to a channel.
+    starboard: { enabled: false, channelId: '', emoji: '⭐', threshold: 3 },
   };
 }
 

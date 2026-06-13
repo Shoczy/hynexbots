@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, Row, NumInput, ChipInput, RoleField, RolesField, ChannelField, uid } from './settingsKit';
+import { Card, Row, NumInput, ChipInput, TextField, RoleField, RolesField, ChannelField, uid } from './settingsKit';
 import { CHANNEL_TYPES } from '@/lib/guildContext';
 import type { ModerationSettings, ModAction, WarnEscalation } from '@/lib/settings';
 
@@ -239,6 +239,39 @@ export function ModerationEditor({
               value={value.modmail.pingRoleId}
               onChange={(pingRoleId) => onChange({ ...value, modmail: { ...value.modmail, pingRoleId } })}
             />
+          </div>
+        </Row>
+
+        <Row
+          label="Starboard"
+          hint="When a message gets enough ⭐ reactions, it's reposted to a highlights channel (and the count keeps updating)."
+          checked={value.starboard.enabled}
+          onChange={(v) => onChange({ ...value, starboard: { ...value.starboard, enabled: v } })}
+        >
+          <div className="space-y-3">
+            <ChannelField
+              label="Starboard channel"
+              hint="Where highlighted messages are posted."
+              types={CHANNEL_TYPES.text}
+              value={value.starboard.channelId}
+              onChange={(channelId) => onChange({ ...value, starboard: { ...value.starboard, channelId } })}
+            />
+            <div className="flex flex-wrap items-end gap-4">
+              <TextField
+                label="Emoji"
+                hint="The reaction that counts. Default ⭐ — or paste a custom server emoji."
+                value={value.starboard.emoji}
+                maxLength={64}
+                onChange={(emoji) => onChange({ ...value, starboard: { ...value.starboard, emoji } })}
+              />
+              <div>
+                <span className="label">Required reactions</span>
+                <div className="mt-1 flex items-center gap-2 text-sm text-mist-muted">
+                  <NumInput value={value.starboard.threshold} min={1} max={100} onChange={(threshold) => onChange({ ...value, starboard: { ...value.starboard, threshold } })} />
+                  <span>to feature it</span>
+                </div>
+              </div>
+            </div>
           </div>
         </Row>
       </Card>
