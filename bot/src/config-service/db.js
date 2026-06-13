@@ -269,6 +269,8 @@ function fivemDefaults() {
     chatBridge: { enabled: false, channelId: '' },
     // In-game admin actions (kick/ban from Discord) — needs the hynex_admin resource.
     admin: { enabled: false },
+    // Queue priority by Discord role — the queue script asks GET /priority.
+    priority: { enabled: false, tiers: [] }, // [{ id, roleId, priority }]
   };
 }
 

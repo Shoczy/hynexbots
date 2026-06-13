@@ -37,7 +37,7 @@ const COMMAND_GROUPS = [
   { id: 'verification', commands: ['verify-panel'] },
   { id: 'reactionroles', commands: ['roles-panel'] },
   { id: 'leveling', commands: ['rank', 'levels', 'setxp'] },
-  { id: 'fivem', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top', 'serverstats', 'fivem-admin'] },
+  { id: 'fivem', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top', 'serverstats', 'fivem-admin', 'link'] },
   { id: 'utility', commands: ['help', 'ping', 'serverinfo', 'userinfo', 'avatar'] },
 ];
 const ALL_GROUPS = COMMAND_GROUPS.map((g) => g.id);

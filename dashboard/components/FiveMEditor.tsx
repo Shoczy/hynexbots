@@ -2,7 +2,7 @@
 
 import type { FiveMSettings } from '@/lib/settings';
 import { CHANNEL_TYPES } from '@/lib/guildContext';
-import { Card, Row, TextField, NumInput, ChannelField, RoleField, ChipInput } from './settingsKit';
+import { Card, Row, TextField, NumInput, ChannelField, RoleField, ChipInput, uid } from './settingsKit';
 import { SendAction } from './SendAction';
 
 /**
@@ -261,6 +261,36 @@ export function FiveMEditor({
             Staff use <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">/fivem-admin kick|ban|unban|bans</code>. Drop the{' '}
             <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">hynex_admin</code> resource on your server (same intake URL + secret as the chat bridge) — setup is in its README.
           </p>
+        </Row>
+
+        <Row
+          label="Queue priority by role"
+          hint="Give members with certain Discord roles a higher spot in the join queue. Members link with /link; your queue script calls the bot's /priority endpoint (see resources/hynex_priority)."
+          checked={value.priority.enabled}
+          onChange={(v) => set('priority', { enabled: v })}
+        >
+          <div className="space-y-2">
+            {value.priority.tiers.length === 0 && <p className="text-xs text-mist-muted">No tiers yet — add a role and its priority (higher = further up the queue).</p>}
+            {value.priority.tiers.map((t) => (
+              <div key={t.id} className="flex flex-wrap items-end gap-3 rounded-xl border border-ink-700 bg-ink-900/40 p-3">
+                <div className="min-w-[12rem] flex-1">
+                  <RoleField label="Role" value={t.roleId} onChange={(roleId) => set('priority', { tiers: value.priority.tiers.map((x) => (x.id === t.id ? { ...x, roleId } : x)) })} />
+                </div>
+                <div>
+                  <span className="label">Priority</span>
+                  <div className="mt-1">
+                    <NumInput value={t.priority} min={0} max={10000} onChange={(priority) => set('priority', { tiers: value.priority.tiers.map((x) => (x.id === t.id ? { ...x, priority } : x)) })} />
+                  </div>
+                </div>
+                <button type="button" onClick={() => set('priority', { tiers: value.priority.tiers.filter((x) => x.id !== t.id) })} className="pb-1.5 text-mist-faint hover:text-red-300">
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button type="button" onClick={() => set('priority', { tiers: [...value.priority.tiers, { id: uid(), roleId: '', priority: 10 }] })} className="btn-ghost text-sm" disabled={value.priority.tiers.length >= 20}>
+              + Add tier
+            </button>
+          </div>
         </Row>
 
         <Row

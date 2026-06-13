@@ -136,6 +136,26 @@ function handle(req, res) {
     });
   }
 
+  // Queue priority: a queue script asks how much priority an identifier gets,
+  // based on the linked member's Discord roles → the highest matching tier.
+  if (req.method === 'GET' && url.pathname === '/priority') {
+    return (async () => {
+      const p = fivem().priority;
+      if (!p?.enabled) return json(res, 200, { ok: true, priority: 0 });
+      const userId = store.userIdForIdentifier(url.searchParams.get('identifier') || '');
+      if (!userId) return json(res, 200, { ok: true, priority: 0 });
+      let best = 0;
+      for (const guild of client.guilds.cache.values()) {
+        const member = await guild.members.fetch(userId).catch(() => null);
+        if (!member) continue;
+        for (const t of p.tiers || []) {
+          if (t.roleId && member.roles.cache.has(t.roleId)) best = Math.max(best, t.priority || 0);
+        }
+      }
+      return json(res, 200, { ok: true, priority: best });
+    })();
+  }
+
   return json(res, 404, { ok: false, error: 'not_found' });
 }
 

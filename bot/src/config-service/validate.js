@@ -395,6 +395,16 @@ function sanitizeFivem(f, def) {
       channelId: snowflake(i.chatBridge?.channelId),
     },
     admin: { enabled: Boolean(i.admin?.enabled) },
+    priority: {
+      enabled: Boolean(i.priority?.enabled),
+      tiers: Array.isArray(i.priority?.tiers)
+        ? i.priority.tiers
+            .filter((t) => t && typeof t === 'object')
+            .map((t) => ({ id: genId(t.id), roleId: snowflake(t.roleId), priority: int(t.priority, 0, 10000, 10) }))
+            .filter((t) => t.roleId)
+            .slice(0, 20)
+        : [],
+    },
   };
 }
 

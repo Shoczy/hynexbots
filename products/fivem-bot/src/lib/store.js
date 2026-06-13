@@ -92,6 +92,30 @@ const removeBan = (identifier) => Number(db.prepare('DELETE FROM fivem_bans WHER
 const listBans = (limit = 50) =>
   db.prepare('SELECT identifier, reason, name, banned_at FROM fivem_bans ORDER BY banned_at DESC LIMIT ?').all(Math.min(Math.max(1, limit | 0), 200));
 
+// Discord ↔ in-game identifier links (for queue priority / lookups).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fivem_links (
+    user_id    TEXT PRIMARY KEY,
+    identifier TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_links_ident ON fivem_links (identifier);
+`);
+function setLink(userId, identifier) {
+  const id = normId(identifier);
+  if (!id) return false;
+  db.prepare(`INSERT INTO fivem_links (user_id, identifier) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET identifier = excluded.identifier`).run(String(userId), id);
+  return true;
+}
+/** Resolve an in-game identifier to a Discord user id (link table, then whitelist). */
+function userIdForIdentifier(identifier) {
+  const id = normId(identifier);
+  if (!id) return null;
+  const link = db.prepare('SELECT user_id FROM fivem_links WHERE identifier = ?').get(id);
+  if (link) return link.user_id;
+  const wl = db.prepare('SELECT user_id FROM whitelist WHERE identifier = ? LIMIT 1').get(id);
+  return wl ? wl.user_id : null;
+}
+
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 /** Add `seconds` of playtime to an identifier and refresh its display name. */
@@ -173,4 +197,6 @@ module.exports = {
   isBanned,
   removeBan,
   listBans,
+  setLink,
+  userIdForIdentifier,
 };
