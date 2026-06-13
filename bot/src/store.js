@@ -15,6 +15,8 @@ const defaults = {
   tickets: {},
   // userId -> timestamp of their last ticket (open-spam cooldown)
   cooldowns: {},
+  // Join welcome message — configured live via /welcome.
+  welcome: { enabled: false, channelId: null, ticketChannelId: null },
 };
 
 function ensure() {
@@ -37,9 +39,26 @@ function write(data) {
   fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
 }
 
+/** Current welcome config (merged over defaults). */
+function getWelcome() {
+  return { ...defaults.welcome, ...(read().welcome || {}) };
+}
+
+/** Patch the welcome config and return the merged result. */
+function setWelcome(patch) {
+  let out;
+  update((d) => {
+    d.welcome = { ...defaults.welcome, ...(d.welcome || {}), ...patch };
+    out = d.welcome;
+  });
+  return out;
+}
+
 module.exports = {
   read,
   write,
+  getWelcome,
+  setWelcome,
   update(mutator) {
     const data = read();
     mutator(data);

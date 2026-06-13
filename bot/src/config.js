@@ -19,6 +19,14 @@ const config = {
     transcriptChannelId: process.env.TRANSCRIPT_CHANNEL_ID || null,
   },
 
+  // Join welcome message (posted by the main bot when a member joins the shop).
+  welcome: {
+    // Channel to post in. Unset → falls back to the guild's system channel.
+    channelId: process.env.WELCOME_CHANNEL_ID || null,
+    // Channel the "Open a Ticket" button links to. Unset → uses paymentPanel.ticketChannelId.
+    ticketChannelId: process.env.WELCOME_TICKET_CHANNEL_ID || null,
+  },
+
   fleet: {
     port: parseInt(process.env.FLEET_PORT || '8787', 10),
     secret: process.env.FLEET_SECRET || 'change-me',
