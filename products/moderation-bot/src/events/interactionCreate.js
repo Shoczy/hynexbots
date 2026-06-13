@@ -2,10 +2,13 @@
 
 const { Events, MessageFlags } = require('discord.js');
 const { authorize, DENY_MESSAGE } = require('../lib/perms');
+const { commandInScope } = require('../lib/scope');
 const { err } = require('../lib/embeds');
 const { VERIFY_BUTTON_ID, handleVerifyButton } = require('../verification');
 const appeal = require('../appeal');
 const reactionroles = require('../reactionroles');
+const giveaways = require('../giveaways');
+const suggestions = require('../suggestions');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -14,6 +17,9 @@ module.exports = {
     if (interaction.isButton()) {
       try {
         if (interaction.customId === VERIFY_BUTTON_ID) await handleVerifyButton(interaction);
+        else if (interaction.customId === giveaways.ENTER_BUTTON_ID) await giveaways.handleEnter(interaction);
+        else if (suggestions.isVote(interaction.customId)) await suggestions.handleVote(interaction);
+        else if (suggestions.isDecision(interaction.customId)) await suggestions.handleDecision(interaction);
         else if (interaction.customId.startsWith(reactionroles.RR_PREFIX)) await reactionroles.handleButton(interaction);
         else if (interaction.customId.startsWith(appeal.APPEAL_PREFIX)) await appeal.handleAppealButton(interaction);
         else if (interaction.customId.startsWith(appeal.DECISION_PREFIX)) await appeal.handleAppealDecision(interaction);
@@ -36,6 +42,13 @@ module.exports = {
     if (!interaction.isChatInputCommand()) return;
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
+
+    // Product scope: this runtime ships every command, but each bot only exposes
+    // its product's groups (Security vs Community). Defense-in-depth — out-of-scope
+    // commands aren't deployed, so this only guards a brief window after a redeploy.
+    if (!commandInScope(interaction.commandName, client.features)) {
+      return interaction.reply({ embeds: [err('That command isn\'t available on this bot.')], flags: MessageFlags.Ephemeral });
+    }
 
     if (!interaction.inGuild()) {
       return interaction.reply({ embeds: [err('This bot only works inside a server.')], flags: MessageFlags.Ephemeral });

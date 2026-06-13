@@ -417,10 +417,13 @@ function mountConfigRoutes(app) {
   app.get('/api/bot/config', botLimit, botAuth, (req, res) => {
     const appId = String(req.query.appId || '');
     if (!appId) return res.status(400).json({ ok: false, error: 'appId required' });
-    if (!store.getBot(appId)) return res.status(404).json({ ok: false, error: 'unknown_bot' });
+    const bot = store.getBot(appId);
+    if (!bot) return res.status(404).json({ ok: false, error: 'unknown_bot' });
     // The bot polls this on an interval, so it doubles as an uptime heartbeat.
     store.recordHeartbeat(appId);
-    res.json({ ok: true, settings: store.getConfig(appId) });
+    // `features` lets the running bot scope its commands to its product type
+    // (e.g. a Community bot won't deploy or answer /ban).
+    res.json({ ok: true, settings: store.getConfig(appId), features: resolveFeatures(bot) });
   });
 
   // ── A customer's running bot polls for dashboard-dispatched commands ──

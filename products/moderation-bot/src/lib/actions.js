@@ -39,7 +39,7 @@ function actionable(guild, target) {
   return me.roles.highest.comparePositionTo(target.roles.highest) > 0;
 }
 
-async function doBan(guild, targetUser, { moderator, reason = 'No reason provided', deleteDays = 0 } = {}) {
+async function doBan(guild, targetUser, { moderator, reason = 'No reason provided', deleteDays = 0, durationMs = 0 } = {}) {
   const member = guild.members.cache.get(targetUser.id);
   if (member && !actionable(guild, member)) return { ok: false, embed: err('I can\'t ban that member (role hierarchy).') };
   // DM the appeal option while a DM channel is still reachable (before the ban).
@@ -52,9 +52,27 @@ async function doBan(guild, targetUser, { moderator, reason = 'No reason provide
   } catch {
     return { ok: false, embed: err('Failed to ban — check my permissions and role position.') };
   }
-  const card = actionCard(guild, { title: 'Member Banned', color: COLORS.danger, target: targetUser, moderator, reason });
+  // Temporary ban → schedule the auto-unban (survives restarts via the sweeper).
+  // A permanent ban clears any prior temp-ban so it won't auto-unban later.
+  if (durationMs > 0) store.addTempBan(guild.id, targetUser.id, Date.now() + durationMs);
+  else store.removeTempBan(guild.id, targetUser.id);
+  store.addCase(guild.id, targetUser.id, moderator?.id || 'system', durationMs > 0 ? 'tempban' : 'ban', reason);
+  const card = actionCard(guild, {
+    title: durationMs > 0 ? 'Member Temp-Banned' : 'Member Banned',
+    color: COLORS.danger,
+    target: targetUser,
+    moderator,
+    reason,
+    fields: durationMs > 0 ? [{ name: 'Duration', value: humanizeMs(durationMs), inline: true }] : [],
+  });
   await logModAction(guild, card);
-  const custom = commandReply('ban', { user: targetUser.tag, moderator: moderator?.tag || 'system', reason, server: guild.name });
+  const custom = commandReply('ban', {
+    user: targetUser.tag,
+    moderator: moderator?.tag || 'system',
+    reason,
+    duration: durationMs > 0 ? humanizeMs(durationMs) : 'permanent',
+    server: guild.name,
+  });
   return custom ? { ok: true, reply: custom } : { ok: true, embed: card };
 }
 
@@ -65,6 +83,7 @@ async function doKick(guild, targetMember, { moderator, reason = 'No reason prov
   } catch {
     return { ok: false, embed: err('Failed to kick — check my permissions and role position.') };
   }
+  store.addCase(guild.id, targetMember.id, moderator?.id || 'system', 'kick', reason);
   const card = actionCard(guild, { title: 'Member Kicked', color: COLORS.danger, target: targetMember.user, moderator, reason });
   await logModAction(guild, card);
   const custom = commandReply('kick', { user: targetMember.user.tag, moderator: moderator?.tag || 'system', reason, server: guild.name });
@@ -89,6 +108,7 @@ async function doMute(guild, targetMember, { moderator, reason = 'No reason prov
       return { ok: false, embed: err('Failed to add the mute role — check my permissions and role position.') };
     }
     if (durationMs) scheduleUnmute(targetMember, role, durationMs);
+    store.addCase(guild.id, targetMember.id, moderator?.id || 'system', 'mute', reason);
     const card = actionCard(guild, {
       title: 'Member Muted',
       color: COLORS.warning,
@@ -109,6 +129,7 @@ async function doMute(guild, targetMember, { moderator, reason = 'No reason prov
   } catch {
     return { ok: false, embed: err('Failed to timeout — check my permissions and role position.') };
   }
+  store.addCase(guild.id, targetMember.id, moderator?.id || 'system', 'mute', reason);
   const card = actionCard(guild, {
     title: 'Member Timed Out',
     color: COLORS.warning,
@@ -128,6 +149,7 @@ async function doUnmute(guild, targetMember, { moderator } = {}) {
   if (muteRoleId && targetMember.roles.cache.has(muteRoleId)) {
     try {
       await targetMember.roles.remove(muteRoleId, `Unmuted by ${moderator?.tag || 'system'}`);
+      store.removeTempRole(guild.id, targetMember.id, muteRoleId); // drop any pending auto-unmute
       acted = true;
     } catch {
       return { ok: false, embed: err('Failed to remove the mute role.') };
@@ -154,6 +176,7 @@ async function doUnmute(guild, targetMember, { moderator } = {}) {
  */
 async function doWarn(guild, targetMember, { moderator, reason = 'No reason provided' } = {}) {
   store.addWarning(guild.id, targetMember.id, moderator?.id || 'system', reason);
+  store.addCase(guild.id, targetMember.id, moderator?.id || 'system', 'warn', reason);
   const cfgWarn = mod().warnings || {};
   const count = store.activeWarnings(guild.id, targetMember.id, cfgWarn.expireDays || 0).length;
 
@@ -234,11 +257,11 @@ async function doLockdown(channel, { lock = true, moderator } = {}) {
 }
 
 // ── helpers ───────────────────────────────────────────
+// Persist the auto-unmute via the temp-role store so it survives a restart —
+// the temprole sweeper removes the role within a minute of the deadline.
+// (An in-memory setTimeout would be lost on restart, leaving the member muted.)
 function scheduleUnmute(member, role, ms) {
-  const t = setTimeout(() => {
-    member.roles.remove(role, 'Temporary mute expired').catch(() => {});
-  }, Math.min(ms, MAX_TIMEOUT_MS));
-  if (t.unref) t.unref();
+  store.addTempRole(member.guild.id, member.id, role.id, Date.now() + ms);
 }
 
 function humanizeMs(ms) {

@@ -18,6 +18,8 @@ const store = require('../config-service/db');
 const PRODUCTS_DIR = path.join(__dirname, '..', '..', '..', 'products');
 const TYPE_DIR = {
   moderation: 'moderation-bot', // sold as "Security"
+  community: 'moderation-bot', // sold as "Community" — same runtime, scoped to community modules
+  allinone: 'moderation-bot', // sold as "All-in-One" — same runtime, security + community modules
   fivem: 'fivem-bot',
 };
 

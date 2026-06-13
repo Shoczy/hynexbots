@@ -74,14 +74,14 @@ test('module toggles persist across save/reload (regression)', () => {
   // dropped the rest on save — toggling antinuke/verification ON silently reverted.
   const features = resolveFeatures(store.getBot(APP)); // moderation (Security)
   const incoming = sanitizeSettings(
-    { modules: { moderation: true, antinuke: true, verification: true, welcome: true } },
+    { modules: { moderation: true, antinuke: true, verification: true } },
     features,
   );
   store.setConfig(APP, incoming);
   const back = store.getConfig(APP);
   assert.equal(back.modules.antinuke, true, 'antinuke persists');
   assert.equal(back.modules.verification, true, 'verification persists');
-  assert.equal(back.modules.welcome, true, 'welcome persists');
+  assert.equal(back.modules.moderation, true, 'moderation persists');
 });
 
 test('sanitizeLeveling clamps values and keeps only valid role rewards', () => {
@@ -106,33 +106,80 @@ test('sanitizeLeveling clamps values and keeps only valid role rewards', () => {
   assert.deepEqual(lv.noXpRoleIds, ['222222222222222222'], 'non-snowflake role ids dropped');
 });
 
-test('moderation product is now a multi-module guardian', () => {
+test('security bot is pure security — no community modules, no fivem', () => {
   const APP6 = '100000000000000006';
   store.registerBot({ appId: APP6, name: 'Guardian', type: 'moderation', ownerId: OWNER, withKey: false });
   const f = resolveFeatures(store.getBot(APP6));
-  assert.ok(f.modules.includes('verification') && f.modules.includes('welcome'), 'bundles verification + welcome');
-  assert.ok(f.tabs.includes('verification') && f.tabs.includes('modules'), 'exposes verification + modules tabs');
-  // The bundled modules can actually be enabled (not clamped off as out-of-scope).
-  const saved = sanitizeSettings({ modules: { welcome: true, verification: true, fivem: true } }, f);
-  assert.equal(saved.modules.welcome, true, 'welcome is in scope');
-  assert.equal(saved.modules.verification, true, 'verification is in scope');
-  assert.equal(saved.modules.fivem, false, 'fivem stays out of scope');
-});
-
-test('security bot bundles its guardian + community modules, not fivem', () => {
-  const APP7 = '100000000000000007';
-  store.registerBot({ appId: APP7, name: 'Guardian2', type: 'moderation', ownerId: OWNER, withKey: false });
-  const f = resolveFeatures(store.getBot(APP7));
-  for (const m of ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'welcome']) {
+  for (const m of ['moderation', 'verification', 'antinuke']) {
     assert.ok(f.modules.includes(m), `bundles ${m}`);
   }
-  // FiveM stays out of the security scope.
-  assert.ok(!f.modules.includes('fivem'), 'no fivem');
-  const saved = sanitizeSettings({ modules: { antinuke: true, reactionroles: true, leveling: true, fivem: true } }, f);
-  assert.equal(saved.modules.antinuke, true);
-  assert.equal(saved.modules.reactionroles, true, 'reaction roles now in scope');
-  assert.equal(saved.modules.leveling, true, 'leveling now in scope');
+  // Community + fivem features are out of the security scope.
+  for (const m of ['reactionroles', 'leveling', 'welcome', 'fivem']) {
+    assert.ok(!f.modules.includes(m), `excludes ${m}`);
+  }
+  const saved = sanitizeSettings({ modules: { antinuke: true, leveling: true, reactionroles: true, fivem: true } }, f);
+  assert.equal(saved.modules.antinuke, true, 'antinuke is in scope');
+  assert.equal(saved.modules.leveling, false, 'leveling forced off (out of scope)');
+  assert.equal(saved.modules.reactionroles, false, 'reaction roles forced off (out of scope)');
   assert.equal(saved.modules.fivem, false, 'fivem forced off (out of scope)');
+});
+
+test('all-in-one bot bundles security + community, not fivem', () => {
+  const APP9 = '100000000000000009';
+  store.registerBot({ appId: APP9, name: 'Nexus', type: 'allinone', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP9));
+  for (const m of ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'starboard', 'welcome']) {
+    assert.ok(f.modules.includes(m), `bundles ${m}`);
+  }
+  assert.ok(!f.modules.includes('fivem'), 'no fivem (separate codebase)');
+  const saved = sanitizeSettings({ modules: { moderation: true, leveling: true, starboard: true, fivem: true } }, f);
+  assert.equal(saved.modules.moderation, true, 'security in scope');
+  assert.equal(saved.modules.leveling, true, 'community in scope');
+  assert.equal(saved.modules.starboard, true, 'starboard in scope');
+  assert.equal(saved.modules.fivem, false, 'fivem forced off (out of scope)');
+});
+
+test('community bot exposes engagement modules, not security', () => {
+  const APP7 = '100000000000000007';
+  store.registerBot({ appId: APP7, name: 'Engage', type: 'community', ownerId: OWNER, withKey: false });
+  const f = resolveFeatures(store.getBot(APP7));
+  for (const m of ['leveling', 'reactionroles', 'welcome']) {
+    assert.ok(f.modules.includes(m), `bundles ${m}`);
+  }
+  for (const m of ['moderation', 'antinuke', 'verification', 'fivem']) {
+    assert.ok(!f.modules.includes(m), `excludes ${m}`);
+  }
+  assert.ok(f.tabs.includes('leveling') && f.tabs.includes('reactionroles') && f.tabs.includes('messages'), 'exposes its tabs');
+  const saved = sanitizeSettings({ modules: { leveling: true, reactionroles: true, welcome: true, moderation: true } }, f);
+  assert.equal(saved.modules.leveling, true, 'leveling in scope');
+  assert.equal(saved.modules.reactionroles, true, 'reaction roles in scope');
+  assert.equal(saved.modules.welcome, true, 'welcome in scope');
+  assert.equal(saved.modules.moderation, false, 'moderation forced off (out of scope)');
+});
+
+test('giveaways module + command are community/all-in-one only', () => {
+  const { allowedCommands } = require('../src/config-service/products');
+  const com = resolveFeatures({ type: 'community' });
+  const all = resolveFeatures({ type: 'allinone' });
+  const sec = resolveFeatures({ type: 'moderation' });
+  assert.ok(com.modules.includes('giveaways') && [...allowedCommands(com)].includes('giveaway'), 'community has giveaways');
+  assert.ok(all.modules.includes('giveaways') && [...allowedCommands(all)].includes('giveaway'), 'all-in-one has giveaways');
+  assert.ok(!sec.modules.includes('giveaways') && ![...allowedCommands(sec)].includes('giveaway'), 'security has no giveaways');
+});
+
+test('suggestions are community/all-in-one; /case is security/all-in-one', () => {
+  const { allowedCommands } = require('../src/config-service/products');
+  const com = resolveFeatures({ type: 'community' });
+  const all = resolveFeatures({ type: 'allinone' });
+  const sec = resolveFeatures({ type: 'moderation' });
+  // suggestions
+  assert.ok(com.modules.includes('suggestions') && [...allowedCommands(com)].includes('suggest'), 'community has suggestions');
+  assert.ok(all.modules.includes('suggestions'), 'all-in-one has suggestions');
+  assert.ok(!sec.modules.includes('suggestions') && ![...allowedCommands(sec)].includes('suggest'), 'security has no suggestions');
+  // /case (mod-cases) — part of the moderation group
+  assert.ok([...allowedCommands(sec)].includes('case'), 'security has /case');
+  assert.ok([...allowedCommands(all)].includes('case'), 'all-in-one has /case');
+  assert.ok(![...allowedCommands(com)].includes('case'), 'community has no /case');
 });
 
 test('sanitizeReactionRoles drops roles without an id/label and caps panels', () => {

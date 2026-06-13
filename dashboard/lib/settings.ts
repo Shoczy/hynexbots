@@ -124,8 +124,16 @@ export type ModerationSettings = {
   dmOnPunish: boolean;
   banAppeal: { enabled: boolean; channelId: string };
   modmail: { enabled: boolean; channelId: string; pingRoleId: string };
-  starboard: { enabled: boolean; channelId: string; emoji: string; threshold: number };
 };
+
+// Starboard tailored settings (its own module — gated by modules.starboard).
+export type StarboardSettings = { channelId: string; emoji: string; threshold: number };
+
+// Giveaway tailored settings (its own module — gated by modules.giveaways).
+export type GiveawaySettings = { managerRoleIds: string[]; dmWinners: boolean };
+
+// Suggestion tailored settings (its own module — gated by modules.suggestions).
+export type SuggestionSettings = { channelId: string; approverRoleIds: string[]; anonymous: boolean };
 
 // Verification-gate tailored settings (a button members click to gain access).
 export type VerificationSettings = {
@@ -174,13 +182,18 @@ export type FiveMSettings = {
 
 // Leveling-bot tailored settings.
 export type LevelReward = { id: string; level: number; roleId: string };
+export type XpMultiplier = { id: string; roleId: string; multiplier: number };
 export type LevelingSettings = {
   xpPerMessage: { min: number; max: number };
   cooldownSec: number;
+  voice: { enabled: boolean; xpPerMinute: number; antiAfk: boolean; ignoreAfkChannel: boolean };
+  multipliers: XpMultiplier[];
   levelUp: { enabled: boolean; channelId: string; message: string };
   stackRewards: boolean;
   rewards: LevelReward[];
   noXpRoleIds: string[];
+  noXpChannelIds: string[];
+  rankCard: boolean;
 };
 
 // Capability scope for a bot, resolved server-side from its product type.
@@ -196,17 +209,29 @@ export type Features = {
 // editor never shows unrelated systems. MUST stay in sync with the bot's
 // source of truth: bot/src/config-service/products.js (TEMPLATES).
 const ALL_FEATURES: Features = {
-  tabs: ['basics', 'modules', 'messages', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'fivem', 'commands'],
-  modules: ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'fivem'],
-  commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'fivem', 'utility'],
+  tabs: ['basics', 'modules', 'messages', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'starboard', 'giveaways', 'suggestions', 'fivem', 'commands'],
+  modules: ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'starboard', 'giveaways', 'suggestions', 'fivem'],
+  commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'giveaways', 'suggestions', 'fivem', 'utility'],
 };
 
 export const PRODUCT_SCOPES: Record<string, Features> = {
-  // Sold as "Security" — only security-relevant modules.
+  // Sold as "Security" — pure server protection, no community features.
   moderation: {
-    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'messages', 'commands'],
-    modules: ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'welcome'],
-    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'utility'],
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke'],
+    commandGroups: ['moderation', 'verification', 'utility'],
+  },
+  // Sold as "Community" — engagement features (reuses the security runtime).
+  community: {
+    tabs: ['basics', 'modules', 'leveling', 'reactionroles', 'starboard', 'giveaways', 'suggestions', 'messages', 'commands'],
+    modules: ['leveling', 'reactionroles', 'starboard', 'giveaways', 'suggestions', 'welcome'],
+    commandGroups: ['leveling', 'reactionroles', 'giveaways', 'suggestions', 'utility'],
+  },
+  // Sold as "All-in-One" — security + community in one bot.
+  allinone: {
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'starboard', 'giveaways', 'suggestions', 'messages', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'starboard', 'giveaways', 'suggestions', 'welcome'],
+    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'giveaways', 'suggestions', 'utility'],
   },
   fivem: {
     tabs: ['basics', 'modules', 'fivem', 'messages', 'commands'],
@@ -255,7 +280,6 @@ export function defaultModeration(): ModerationSettings {
     dmOnPunish: false,
     banAppeal: { enabled: false, channelId: '' },
     modmail: { enabled: false, channelId: '', pingRoleId: '' },
-    starboard: { enabled: false, channelId: '', emoji: '⭐', threshold: 3 },
   };
 }
 
@@ -315,11 +339,27 @@ export function defaultLeveling(): LevelingSettings {
   return {
     xpPerMessage: { min: 15, max: 25 },
     cooldownSec: 60,
+    voice: { enabled: true, xpPerMinute: 10, antiAfk: true, ignoreAfkChannel: true },
+    multipliers: [],
     levelUp: { enabled: true, channelId: '', message: 'GG {user}, you reached level {level}! 🎉' },
     stackRewards: true,
     rewards: [],
     noXpRoleIds: [],
+    noXpChannelIds: [],
+    rankCard: true,
   };
+}
+
+export function defaultStarboard(): StarboardSettings {
+  return { channelId: '', emoji: '⭐', threshold: 3 };
+}
+
+export function defaultGiveaways(): GiveawaySettings {
+  return { managerRoleIds: [], dmWinners: true };
+}
+
+export function defaultSuggestions(): SuggestionSettings {
+  return { channelId: '', approverRoleIds: [], anonymous: false };
 }
 
 export type Settings = {
@@ -332,6 +372,9 @@ export type Settings = {
   reactionRoles: ReactionRolesSettings;
   antiNuke: AntiNukeSettings;
   leveling: LevelingSettings;
+  starboard: StarboardSettings;
+  giveaways: GiveawaySettings;
+  suggestions: SuggestionSettings;
   fivem: FiveMSettings;
 };
 
@@ -342,6 +385,9 @@ export const MODULES: { key: string; label: string; hint: string }[] = [
   { key: 'antinuke', label: 'Anti-Nuke', hint: 'Stop mass bans/deletes by rogue or compromised admins' },
   { key: 'welcome', label: 'Welcome & Goodbye', hint: 'Greet new members and announce leaves' },
   { key: 'leveling', label: 'Leveling', hint: 'XP, ranks and level-up rewards' },
+  { key: 'starboard', label: 'Starboard', hint: 'Repost popular messages once they hit a star threshold' },
+  { key: 'giveaways', label: 'Giveaways', hint: 'Run timed giveaways members enter with a button' },
+  { key: 'suggestions', label: 'Suggestions', hint: 'A board where members post ideas and vote 👍/👎' },
   { key: 'fivem', label: 'FiveM', hint: 'Server status, whitelist, in-game reports & restart alerts' },
 ];
 
@@ -366,10 +412,12 @@ export const MATCH_MODES: [string, string][] = [
 // Must list EVERY command each product bot ships (kept in sync with the backend
 // COMMAND_GROUPS in bot/src/config-service/products.js).
 export const COMMAND_GROUPS: { module: string; label: string; commands: string[] }[] = [
-  { module: 'moderation', label: 'Moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode', 'temprole'] },
+  { module: 'moderation', label: 'Moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode', 'temprole', 'case'] },
   { module: 'verification', label: 'Verification', commands: ['verify-panel'] },
   { module: 'reactionroles', label: 'Reaction Roles', commands: ['roles-panel'] },
   { module: 'leveling', label: 'Leveling', commands: ['rank', 'levels', 'setxp'] },
+  { module: 'giveaways', label: 'Giveaways', commands: ['giveaway'] },
+  { module: 'suggestions', label: 'Suggestions', commands: ['suggest'] },
   { module: 'fivem', label: 'FiveM', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top', 'serverstats', 'fivem-admin', 'link'] },
   { module: 'utility', label: 'Utility', commands: ['help', 'ping', 'serverinfo', 'userinfo', 'avatar'] },
 ];

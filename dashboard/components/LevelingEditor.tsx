@@ -1,9 +1,9 @@
 'use client';
 
-import { Card, Row, StatRow, NumInput, ChannelField, RoleSelect, RolesField, uid } from './settingsKit';
+import { Card, Row, StatRow, NumInput, ChannelField, ChannelsField, RoleSelect, RolesField, uid } from './settingsKit';
 import { EmbedPreview } from './EmbedPreview';
 import { CHANNEL_TYPES } from '@/lib/guildContext';
-import type { LevelingSettings, LevelReward } from '@/lib/settings';
+import type { LevelingSettings, LevelReward, XpMultiplier } from '@/lib/settings';
 
 export function LevelingEditor({
   value,
@@ -19,6 +19,7 @@ export function LevelingEditor({
   const set = (patch: Partial<LevelingSettings>) => onChange({ ...value, ...patch });
   const xp = value.xpPerMessage;
   const lu = value.levelUp;
+  const voice = value.voice;
 
   return (
     <div className="space-y-5">
@@ -34,7 +35,46 @@ export function LevelingEditor({
           <NumInput value={value.cooldownSec} min={0} max={3600} width="w-24" onChange={(cooldownSec) => set({ cooldownSec })} />
           <span>seconds</span>
         </StatRow>
+        <Row
+          label="Image rank card"
+          hint="Show /rank as a generated image (avatar, level, rank & progress bar). When off, a text embed is used."
+          checked={value.rankCard}
+          onChange={(rankCard) => set({ rankCard })}
+        />
         <RolesField label="No-XP roles" hint="Members with these roles earn no XP." value={value.noXpRoleIds} onChange={(noXpRoleIds) => set({ noXpRoleIds })} />
+        <ChannelsField
+          label="No-XP channels"
+          hint="Messages and voice activity in these channels earn no XP."
+          value={value.noXpChannelIds}
+          onChange={(noXpChannelIds) => set({ noXpChannelIds })}
+        />
+      </Card>
+
+      <Card title="Voice XP" desc="Reward members for spending time in voice channels.">
+        <Row label="Earn XP in voice" checked={voice.enabled} onChange={(enabled) => set({ voice: { ...voice, enabled } })}>
+          <div className="space-y-3">
+            <StatRow>
+              <span className="text-mist">XP per minute in voice</span>
+              <NumInput value={voice.xpPerMinute} min={0} max={1000} onChange={(xpPerMinute) => set({ voice: { ...voice, xpPerMinute } })} />
+            </StatRow>
+            <Row
+              label="Anti-AFK"
+              hint="No XP while muted, deafened, or alone in a channel — stops members idling for XP."
+              checked={voice.antiAfk}
+              onChange={(antiAfk) => set({ voice: { ...voice, antiAfk } })}
+            />
+            <Row
+              label="Skip the AFK channel"
+              hint="Members moved to the server's AFK channel earn no voice XP."
+              checked={voice.ignoreAfkChannel}
+              onChange={(ignoreAfkChannel) => set({ voice: { ...voice, ignoreAfkChannel } })}
+            />
+          </div>
+        </Row>
+      </Card>
+
+      <Card title="XP multipliers" desc="Give certain roles a boost — perfect for boosters or premium members.">
+        <MultipliersEditor value={value.multipliers} onChange={(multipliers) => set({ multipliers })} />
       </Card>
 
       <Card title="Level-up announcement" desc="Celebrate members when they reach a new level.">
@@ -108,6 +148,43 @@ function RewardsEditor({ value, onChange }: { value: LevelReward[]; onChange: (r
       ))}
       <button type="button" onClick={add} className="btn-ghost text-sm">
         + Add reward
+      </button>
+    </div>
+  );
+}
+
+function MultipliersEditor({ value, onChange }: { value: XpMultiplier[]; onChange: (m: XpMultiplier[]) => void }) {
+  const add = () => onChange([...value, { id: uid(), roleId: '', multiplier: 2 }]);
+  const patch = (id: string, p: Partial<XpMultiplier>) => onChange(value.map((m) => (m.id === id ? { ...m, ...p } : m)));
+  const remove = (id: string) => onChange(value.filter((m) => m.id !== id));
+  const clampMult = (n: number) => Math.min(10, Math.max(1, Math.round((Number.isFinite(n) ? n : 1) * 10) / 10));
+
+  return (
+    <div className="space-y-2">
+      {value.length === 0 && <p className="text-xs text-mist-muted">No multipliers yet — everyone earns the base rate.</p>}
+      {value.map((m) => (
+        <div key={m.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-ink-700 bg-ink-900/40 px-4 py-3 text-sm text-mist-muted">
+          <div className="min-w-[12rem] flex-1">
+            <RoleSelect value={m.roleId} onChange={(roleId) => patch(m.id, { roleId })} placeholder="Pick a role" />
+          </div>
+          <span>earns</span>
+          <input
+            type="number"
+            className="input w-20 py-1 text-center text-sm"
+            value={m.multiplier}
+            min={1}
+            max={10}
+            step={0.5}
+            onChange={(e) => patch(m.id, { multiplier: clampMult(parseFloat(e.target.value)) })}
+          />
+          <span>× XP</span>
+          <button type="button" onClick={() => remove(m.id)} className="text-mist-faint hover:text-red-300">
+            Remove
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={add} className="btn-ghost text-sm">
+        + Add multiplier
       </button>
     </div>
   );

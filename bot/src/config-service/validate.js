@@ -5,7 +5,7 @@ const { defaultSettings } = require('./db');
 const { allowedCommands } = require('./products');
 
 const LANGS = ['en', 'es', 'fr', 'de', 'pt', 'nl', 'it'];
-const MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'fivem'];
+const MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'starboard', 'giveaways', 'suggestions', 'fivem'];
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // 24h HH:MM
 const MATCH_MODES = ['contains', 'exact', 'startsWith', 'endsWith'];
 const MOD_ACTIONS = ['timeout', 'mute', 'kick', 'ban'];
@@ -25,6 +25,12 @@ const snowflake = (v) => (isSnowflake(v) ? v : '');
 /** Clamp to an integer within [min, max], falling back when not a finite number. */
 const int = (v, min, max, fallback) => {
   const n = Math.round(Number(v));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+};
+/** Like `int` but keeps one decimal place (for ratios such as XP multipliers). */
+const num = (v, min, max, fallback) => {
+  const n = Math.round(Number(v) * 10) / 10;
   if (!Number.isFinite(n)) return fallback;
   return Math.min(max, Math.max(min, n));
 };
@@ -246,12 +252,6 @@ function sanitizeModeration(m, def) {
       channelId: snowflake(i.modmail?.channelId),
       pingRoleId: snowflake(i.modmail?.pingRoleId),
     },
-    starboard: {
-      enabled: Boolean(i.starboard?.enabled),
-      channelId: snowflake(i.starboard?.channelId),
-      emoji: str(i.starboard?.emoji, 64, '').trim() || '⭐',
-      threshold: int(i.starboard?.threshold, 1, 100, def.starboard.threshold),
-    },
     autoSlowmode: {
       enabled: Boolean(as.enabled),
       messages: int(as.messages, 2, 500, def.autoSlowmode.messages),
@@ -428,9 +428,29 @@ function sanitizeLeveling(l, def) {
         .slice(0, 50)
     : [];
 
+  const multipliers = Array.isArray(i.multipliers)
+    ? i.multipliers
+        .filter((m) => m && typeof m === 'object')
+        .map((m) => ({
+          id: /^[\w-]{1,40}$/.test(String(m.id || '')) ? String(m.id) : crypto.randomUUID(),
+          roleId: snowflake(m.roleId),
+          multiplier: num(m.multiplier, 1, 10, 2),
+        }))
+        .filter((m) => m.roleId)
+        .slice(0, 50)
+    : [];
+
+  const v = i.voice || {};
   return {
     xpPerMessage: { min, max: Math.max(min, max) },
     cooldownSec: int(i.cooldownSec, 0, 3600, def.cooldownSec),
+    voice: {
+      enabled: Boolean(v.enabled),
+      xpPerMinute: int(v.xpPerMinute, 0, 1000, def.voice.xpPerMinute),
+      antiAfk: v.antiAfk === undefined ? def.voice.antiAfk : Boolean(v.antiAfk),
+      ignoreAfkChannel: v.ignoreAfkChannel === undefined ? def.voice.ignoreAfkChannel : Boolean(v.ignoreAfkChannel),
+    },
+    multipliers,
     levelUp: {
       enabled: Boolean(lu.enabled),
       channelId: snowflake(lu.channelId),
@@ -441,6 +461,10 @@ function sanitizeLeveling(l, def) {
     noXpRoleIds: Array.isArray(i.noXpRoleIds)
       ? [...new Set(i.noXpRoleIds.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES)
       : [],
+    noXpChannelIds: Array.isArray(i.noXpChannelIds)
+      ? [...new Set(i.noXpChannelIds.filter((c) => /^\d{1,20}$/.test(String(c))).map(String))].slice(0, MAX_MOD_ROLES)
+      : [],
+    rankCard: i.rankCard === undefined ? def.rankCard : Boolean(i.rankCard),
   };
 }
 
@@ -512,9 +536,45 @@ function sanitizeSettings(input, features = null) {
   out.reactionRoles = sanitizeReactionRoles(i.reactionRoles, d.reactionRoles);
   out.antiNuke = sanitizeAntiNuke(i.antiNuke, d.antiNuke);
   out.leveling = sanitizeLeveling(i.leveling, d.leveling);
+  out.starboard = sanitizeStarboard(i.starboard, d.starboard);
+  out.giveaways = sanitizeGiveaways(i.giveaways, d.giveaways);
+  out.suggestions = sanitizeSuggestions(i.suggestions, d.suggestions);
   out.fivem = sanitizeFivem(i.fivem, d.fivem);
 
   return out;
+}
+
+/** Sanitize the top-level suggestions settings (gated by the `suggestions` module). */
+function sanitizeSuggestions(s, def) {
+  const i = s && typeof s === 'object' ? s : {};
+  return {
+    channelId: snowflake(i.channelId),
+    approverRoleIds: Array.isArray(i.approverRoleIds)
+      ? [...new Set(i.approverRoleIds.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES)
+      : [],
+    anonymous: i.anonymous === undefined ? def.anonymous : Boolean(i.anonymous),
+  };
+}
+
+/** Sanitize the top-level starboard settings (gated by the `starboard` module). */
+function sanitizeStarboard(s, def) {
+  const i = s && typeof s === 'object' ? s : {};
+  return {
+    channelId: snowflake(i.channelId),
+    emoji: str(i.emoji, 64, '').trim() || def.emoji,
+    threshold: int(i.threshold, 1, 100, def.threshold),
+  };
+}
+
+/** Sanitize the top-level giveaways settings (gated by the `giveaways` module). */
+function sanitizeGiveaways(s, def) {
+  const i = s && typeof s === 'object' ? s : {};
+  return {
+    managerRoleIds: Array.isArray(i.managerRoleIds)
+      ? [...new Set(i.managerRoleIds.filter((r) => /^\d{1,20}$/.test(String(r))).map(String))].slice(0, MAX_MOD_ROLES)
+      : [],
+    dmWinners: i.dmWinners === undefined ? def.dmWinners : Boolean(i.dmWinners),
+  };
 }
 
 /**

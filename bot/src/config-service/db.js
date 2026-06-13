@@ -190,6 +190,9 @@ function defaultSettings() {
       antinuke: false,
       welcome: false,
       leveling: false,
+      starboard: false,
+      giveaways: false,
+      suggestions: false,
       fivem: true,
     },
     messages: {
@@ -207,8 +210,26 @@ function defaultSettings() {
     reactionRoles: reactionRolesDefaults(),
     antiNuke: antiNukeDefaults(),
     leveling: levelingDefaults(),
+    starboard: starboardDefaults(),
+    giveaways: giveawayDefaults(),
+    suggestions: suggestionDefaults(),
     fivem: fivemDefaults(),
   };
+}
+
+/** Suggestions: the board channel, who can resolve them, and anonymity. */
+function suggestionDefaults() {
+  return { channelId: '', approverRoleIds: [], anonymous: false };
+}
+
+/** Starboard: messages that hit `threshold` of `emoji` get reposted to a channel. */
+function starboardDefaults() {
+  return { channelId: '', emoji: '⭐', threshold: 3 };
+}
+
+/** Giveaways: who can run them (besides Manage Server) and whether winners get a DM. */
+function giveawayDefaults() {
+  return { managerRoleIds: [], dmWinners: true };
 }
 
 /**
@@ -358,8 +379,6 @@ function moderationDefaults() {
     banAppeal: { enabled: false, channelId: '' },
     // Modmail: members DM the bot → a private staff thread; staff replies relay back.
     modmail: { enabled: false, channelId: '', pingRoleId: '' },
-    // Starboard: messages that hit `threshold` of `emoji` get reposted to a channel.
-    starboard: { enabled: false, channelId: '', emoji: '⭐', threshold: 3 },
   };
 }
 
@@ -392,6 +411,13 @@ function levelingDefaults() {
   return {
     xpPerMessage: { min: 15, max: 25 },
     cooldownSec: 60, // min seconds between XP-earning messages
+    voice: {
+      enabled: true,
+      xpPerMinute: 10, // XP granted for each minute spent in voice
+      antiAfk: true, // no XP while muted/deafened or alone in the channel
+      ignoreAfkChannel: true, // no XP in the server's AFK channel
+    },
+    multipliers: [], // [{ id, roleId, multiplier }] — XP boost for role holders (e.g. boosters)
     levelUp: {
       enabled: true,
       channelId: '', // empty = announce in the channel they leveled up in
@@ -400,6 +426,8 @@ function levelingDefaults() {
     stackRewards: true, // keep lower reward roles when a higher one is earned
     rewards: [], // [{ id, level, roleId }] — role granted at a level
     noXpRoleIds: [], // members with these roles earn no XP
+    noXpChannelIds: [], // messages/voice in these channels earn no XP
+    rankCard: true, // render /rank as an image card (falls back to an embed)
   };
 }
 
@@ -481,6 +509,13 @@ function migrateLegacy(stored) {
     if (v.title) blocks.push({ id: crypto.randomUUID(), type: 'text', content: `## ${v.title}` });
     if (v.description) blocks.push({ id: crypto.randomUUID(), type: 'text', content: String(v.description) });
     out.verification = seed(v, blocks);
+  }
+  // Starboard moved from `moderation.starboard` to a top-level module. Lift legacy
+  // configs once (only when the new location is empty) so nothing is lost.
+  const legacyStar = stored.moderation && typeof stored.moderation === 'object' ? stored.moderation.starboard : null;
+  if (legacyStar && typeof legacyStar === 'object' && !stored.starboard) {
+    out.starboard = { channelId: legacyStar.channelId || '', emoji: legacyStar.emoji || '⭐', threshold: legacyStar.threshold || 3 };
+    if (legacyStar.enabled) out.modules = { ...(out.modules || stored.modules || {}), starboard: true };
   }
   return out;
 }

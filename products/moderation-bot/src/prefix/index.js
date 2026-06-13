@@ -2,6 +2,7 @@
 
 const { cfg } = require('../lib/state');
 const { authorize, DENY_MESSAGE, PermissionFlagsBits } = require('../lib/perms');
+const { commandInScope } = require('../lib/scope');
 const { ok, err, info } = require('../lib/embeds');
 const actions = require('../lib/actions');
 const { parseDuration } = require('../commands/_helpers');
@@ -52,6 +53,8 @@ async function handlePrefix(message) {
   // Only surface a denial for commands we actually own.
   const known = KNOWN.has(name);
   if (!known) return false;
+  // Out of this bot's product scope (e.g. a Community bot ignoring !ban).
+  if (!commandInScope(name, message.client.features)) return false;
   if (!auth.ok) {
     await send(message, err(DENY_MESSAGE[auth.reason] || 'Not allowed.'));
     return true;
@@ -61,8 +64,10 @@ async function handlePrefix(message) {
   switch (name) {
     case 'ban': {
       const user = await resolveUser(message, args[0]);
-      if (!user) return reply(message, 'Usage: `ban @user [reason]`');
-      const res = await actions.doBan(message.guild, user, { moderator: message.author, reason: args.slice(1).join(' ') || 'No reason provided' });
+      if (!user) return reply(message, 'Usage: `ban @user [duration] [reason]`');
+      const maybeDur = parseDuration(args[1]);
+      const reason = (maybeDur ? args.slice(2) : args.slice(1)).join(' ') || 'No reason provided';
+      const res = await actions.doBan(message.guild, user, { moderator: message.author, reason, durationMs: maybeDur });
       return sendRes(message, res), true;
     }
     case 'kick': {

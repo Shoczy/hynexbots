@@ -7,7 +7,10 @@ const { setSettings, cfg } = require('../lib/state');
 const { panelPayload } = require('../verification');
 const { buildMessagePayload } = require('../lib/messages');
 const temproles = require('../temproles');
+const tempbans = require('../tempbans');
+const giveaways = require('../giveaways');
 const announcements = require('../announcements');
+const voiceXp = require('../leveling/voice');
 
 /** Post a payload to a globally-unique channel id, if it's reachable. */
 async function postToChannel(client, channelId, payload) {
@@ -78,6 +81,7 @@ module.exports = {
     try {
       const first = await configClient.start();
       setSettings(first);
+      client.features = configClient.features; // product scope (Security vs Community) for command gating
       console.log('✔ Loaded config from', config.api.baseUrl);
     } catch (err) {
       console.warn('⚠ Could not reach the config service yet — using defaults until it\'s up.', err.message);
@@ -86,6 +90,7 @@ module.exports = {
     let nickTimer = null;
     configClient.onChange((next) => {
       setSettings(next);
+      client.features = configClient.features;
       console.log('⚙ Config updated from dashboard.');
       // Re-apply nickname (debounced) when basics change.
       clearTimeout(nickTimer);
@@ -100,8 +105,14 @@ module.exports = {
 
     // Auto-remove expired temp-roles (sweeps every minute, survives restarts).
     temproles.startSweeper(client);
+    // Auto-unban expired temp-bans (sweeps every minute, survives restarts).
+    tempbans.startSweeper(client);
+    // Draw giveaways when their timer ends (sweeps every 30s, survives restarts).
+    giveaways.startSweeper(client);
     // Scheduled announcements (checked every minute).
     announcements.start(client);
+    // Voice XP: award members in voice once per minute (leveling).
+    voiceXp.start(client);
 
     // Report each guild's roles & channels so the dashboard shows real pick-lists.
     for (const guild of client.guilds.cache.values()) {

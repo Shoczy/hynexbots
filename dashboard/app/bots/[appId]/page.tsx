@@ -18,6 +18,9 @@ import { ReactionRolesEditor } from '@/components/ReactionRolesEditor';
 import { AntiNukeEditor } from '@/components/AntiNukeEditor';
 import { FiveMEditor } from '@/components/FiveMEditor';
 import { LevelingEditor } from '@/components/LevelingEditor';
+import { StarboardEditor } from '@/components/StarboardEditor';
+import { GiveawaysEditor } from '@/components/GiveawaysEditor';
+import { SuggestionsEditor } from '@/components/SuggestionsEditor';
 import {
   MODULES,
   LANGS,
@@ -28,13 +31,16 @@ import {
   defaultAntiNuke,
   defaultFiveM,
   defaultLeveling,
+  defaultStarboard,
+  defaultGiveaways,
+  defaultSuggestions,
   type Settings,
   type Features,
 } from '@/lib/settings';
 import { GuildProvider, type Guild } from '@/lib/guildContext';
 import { withBase } from '@/lib/paths';
 
-type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'verification' | 'reactionroles' | 'antinuke' | 'fivem' | 'leveling' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
+type Tab = 'basics' | 'modules' | 'messages' | 'moderation' | 'verification' | 'reactionroles' | 'antinuke' | 'fivem' | 'leveling' | 'starboard' | 'giveaways' | 'suggestions' | 'commands' | 'analytics' | 'logs' | 'team' | 'license';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'basics', label: 'Basics' },
   { id: 'modules', label: 'Modules' },
@@ -45,6 +51,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'antinuke', label: 'Anti-Nuke' },
   { id: 'fivem', label: 'FiveM' },
   { id: 'leveling', label: 'Leveling' },
+  { id: 'starboard', label: 'Starboard' },
+  { id: 'giveaways', label: 'Giveaways' },
+  { id: 'suggestions', label: 'Suggestions' },
   { id: 'commands', label: 'Commands' },
 ];
 
@@ -55,7 +64,7 @@ const TAB_GROUPS: { label: string; tabs: Tab[] }[] = [
   { label: 'Setup', tabs: ['basics', 'modules', 'messages', 'commands'] },
   {
     label: 'Modules',
-    tabs: ['moderation', 'antinuke', 'verification', 'fivem', 'reactionroles', 'leveling'],
+    tabs: ['moderation', 'antinuke', 'verification', 'fivem', 'reactionroles', 'leveling', 'starboard', 'giveaways', 'suggestions'],
   },
   { label: 'Insights', tabs: ['analytics', 'logs'] },
   { label: 'Manage', tabs: ['team', 'license'] },
@@ -70,6 +79,9 @@ const TAB_MODULE: Partial<Record<Tab, string>> = {
   reactionroles: 'reactionroles',
   antinuke: 'antinuke',
   leveling: 'leveling',
+  starboard: 'starboard',
+  giveaways: 'giveaways',
+  suggestions: 'suggestions',
   fivem: 'fivem',
 };
 
@@ -168,6 +180,18 @@ export default function EditorPage() {
   }
   function setLeveling(leveling: Settings['leveling']) {
     setSettings((s) => (s ? { ...s, leveling } : s));
+    markDirty();
+  }
+  function setStarboard(starboard: Settings['starboard']) {
+    setSettings((s) => (s ? { ...s, starboard } : s));
+    markDirty();
+  }
+  function setGiveaways(giveaways: Settings['giveaways']) {
+    setSettings((s) => (s ? { ...s, giveaways } : s));
+    markDirty();
+  }
+  function setSuggestions(suggestions: Settings['suggestions']) {
+    setSettings((s) => (s ? { ...s, suggestions } : s));
     markDirty();
   }
 
@@ -415,6 +439,24 @@ export default function EditorPage() {
           {tab === 'leveling' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
               <LevelingEditor value={settings.leveling ?? defaultLeveling()} onChange={setLeveling} accent={settings.basics.embedColor} botName={settings.basics.nickname || bot?.name || 'Your Bot'} />
+            </motion.div>
+          )}
+
+          {tab === 'starboard' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <StarboardEditor value={settings.starboard ?? defaultStarboard()} onChange={setStarboard} />
+            </motion.div>
+          )}
+
+          {tab === 'giveaways' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <GiveawaysEditor value={settings.giveaways ?? defaultGiveaways()} onChange={setGiveaways} />
+            </motion.div>
+          )}
+
+          {tab === 'suggestions' && (
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+              <SuggestionsEditor value={settings.suggestions ?? defaultSuggestions()} onChange={setSuggestions} />
             </motion.div>
           )}
 

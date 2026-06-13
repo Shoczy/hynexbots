@@ -1,7 +1,7 @@
 'use strict';
 
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { mod } = require('../lib/state');
+const { cfg } = require('../lib/state');
 const { brandColor } = require('../lib/embeds');
 const store = require('../lib/store');
 
@@ -33,8 +33,9 @@ const jumpRow = (message) =>
 async function handleReaction(reaction, user, client) {
   try {
     if (user?.bot) return;
-    const sb = mod().starboard;
-    if (!sb?.enabled || !sb.channelId) return;
+    if (!cfg('modules.starboard', false)) return;
+    const sb = cfg('starboard', {});
+    if (!sb.channelId) return;
 
     if (reaction.partial) await reaction.fetch().catch(() => null);
     const message = reaction.message;

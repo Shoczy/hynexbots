@@ -12,7 +12,7 @@
  * Read-only views (live status, logs) are available to any member regardless of
  * their grants, so a member always sees the bot they help manage.
  */
-const EDIT_TABS = ['basics', 'modules', 'messages', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'fivem', 'commands'];
+const EDIT_TABS = ['basics', 'modules', 'messages', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'starboard', 'giveaways', 'suggestions', 'fivem', 'commands'];
 const PROCESS = 'process';
 const ALL_PERMISSIONS = [...EDIT_TABS, PROCESS];
 

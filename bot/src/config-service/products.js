@@ -12,8 +12,8 @@
 
 const ALL_TABS = ['basics', 'modules', 'messages', 'commands']; // generic tabs (custom default)
 // Every valid tab id, including type-specific settings tabs — used to clamp overrides.
-const KNOWN_TABS = ['basics', 'modules', 'messages', 'commands', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'fivem'];
-const ALL_MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'fivem'];
+const KNOWN_TABS = ['basics', 'modules', 'messages', 'commands', 'moderation', 'verification', 'reactionroles', 'antinuke', 'leveling', 'starboard', 'giveaways', 'suggestions', 'fivem'];
+const ALL_MODULES = ['moderation', 'verification', 'reactionroles', 'antinuke', 'welcome', 'leveling', 'starboard', 'giveaways', 'suggestions', 'fivem'];
 
 // Which settings tab a module's deeper config lives under. `welcome` is edited in
 // the shared Messages tab; the rest each have a dedicated tab. Used to surface the
@@ -24,6 +24,9 @@ const MODULE_TABS = {
   reactionroles: 'reactionroles',
   antinuke: 'antinuke',
   leveling: 'leveling',
+  starboard: 'starboard',
+  giveaways: 'giveaways',
+  suggestions: 'suggestions',
   fivem: 'fivem',
   welcome: 'messages',
 };
@@ -33,10 +36,12 @@ const MODULE_TABS = {
 // list EVERY command the matching product bot actually ships, or the dashboard
 // can't expose it and saves would drop its per-command settings.
 const COMMAND_GROUPS = [
-  { id: 'moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode', 'temprole'] },
+  { id: 'moderation', commands: ['ban', 'kick', 'mute', 'unmute', 'warn', 'warnings', 'purge', 'lockdown', 'slowmode', 'temprole', 'case'] },
   { id: 'verification', commands: ['verify-panel'] },
   { id: 'reactionroles', commands: ['roles-panel'] },
   { id: 'leveling', commands: ['rank', 'levels', 'setxp'] },
+  { id: 'giveaways', commands: ['giveaway'] },
+  { id: 'suggestions', commands: ['suggest'] },
   { id: 'fivem', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top', 'serverstats', 'fivem-admin', 'link'] },
   { id: 'utility', commands: ['help', 'ping', 'serverinfo', 'userinfo', 'avatar'] },
 ];
@@ -48,13 +53,29 @@ const ALL_GROUPS = COMMAND_GROUPS.map((g) => g.id);
 // because there's nothing else to toggle — the bot IS that one system.
 // Multi-system bots are sold as `custom`, which unlocks everything.
 const TEMPLATES = {
-  // The Security bot is a focused "server guardian": moderation/auto-mod + a
-  // verification gate + anti-nuke + welcome/auto-roles (edited in the Messages
-  // tab). Only security-relevant modules — no reaction roles or leveling.
+  // The Security bot is a focused "server guardian": moderation/auto-mod, a
+  // verification gate and anti-nuke. Security only — no community features
+  // (leveling, reaction roles, welcome) so the product stays on-theme.
   moderation: {
-    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'messages', 'commands'],
-    modules: ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'welcome'],
-    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'utility'],
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke'],
+    commandGroups: ['moderation', 'verification', 'utility'],
+  },
+  // The Community bot is the engagement counterpart: leveling (with voice XP),
+  // reaction roles and welcome/auto-roles + autoresponders & announcements
+  // (Messages tab). Reuses the security bot's runtime, scoped to these modules.
+  community: {
+    tabs: ['basics', 'modules', 'leveling', 'reactionroles', 'starboard', 'giveaways', 'suggestions', 'messages', 'commands'],
+    modules: ['leveling', 'reactionroles', 'starboard', 'giveaways', 'suggestions', 'welcome'],
+    commandGroups: ['leveling', 'reactionroles', 'giveaways', 'suggestions', 'utility'],
+  },
+  // The All-in-One bot bundles everything the runtime offers — security AND
+  // community — for servers that want a single bot to do it all. FiveM is a
+  // separate codebase, so it isn't part of this bundle.
+  allinone: {
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'starboard', 'giveaways', 'suggestions', 'messages', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'starboard', 'giveaways', 'suggestions', 'welcome'],
+    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'giveaways', 'suggestions', 'utility'],
   },
   // The FiveM bot: live server status, role whitelist, in-game reports and
   // scheduled restart announcements, plus welcome onboarding.

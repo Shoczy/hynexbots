@@ -401,7 +401,72 @@ export function ChannelSelect({
   return <Picker value={value} onChange={onChange} options={options} placeholder={placeholder} />;
 }
 
+/** Multi-select channels. Chips + an "add" dropdown when synced; ID chips otherwise. */
+export function ChannelPicker({ value, onChange, types }: { value: string[]; onChange: (ids: string[]) => void; types?: number[] }) {
+  const { channels } = useGuild();
+  if (channels.length === 0) {
+    return (
+      <div className="space-y-1.5">
+        <RoleIdChips items={value} onChange={onChange} />
+        <p className="text-[11px] text-mist-faint">Connect your bot to pick channels by name instead of pasting IDs.</p>
+      </div>
+    );
+  }
+  const list = types ? channels.filter((c) => types.includes(c.type)) : channels;
+  const available = list.filter((c) => !value.includes(c.id));
+  const nameOf = (id: string) => channels.find((c) => c.id === id)?.name ?? id;
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {value.length === 0 && <span className="text-xs text-mist-muted">None selected.</span>}
+        {value.map((id) => (
+          <span key={id} className="inline-flex items-center gap-1.5 rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-xs text-mist">
+            #{nameOf(id)}
+            <button type="button" onClick={() => onChange(value.filter((x) => x !== id))} className="text-mist-faint hover:text-red-300">
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
+      {available.length > 0 && (
+        <div className="w-52">
+          <Picker
+            value=""
+            onChange={(id) => id && onChange([...value, id])}
+            options={available.map((c) => ({ value: c.id, label: `#${c.name}` }))}
+            placeholder="+ Add channel…"
+            allowClear={false}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Labeled wrappers (drop-in for the editors).
+export function ChannelsField({
+  label,
+  hint,
+  value,
+  onChange,
+  types,
+}: {
+  label: string;
+  hint?: string;
+  value: string[];
+  onChange: (ids: string[]) => void;
+  types?: number[];
+}) {
+  return (
+    <div>
+      <FieldLabel label={label} hint={hint} />
+      <div className="mt-1">
+        <ChannelPicker value={value} onChange={onChange} types={types} />
+      </div>
+    </div>
+  );
+}
+
 export function RolesField({ label, hint, value, onChange }: { label: string; hint?: string; value: string[]; onChange: (ids: string[]) => void }) {
   return (
     <div>

@@ -17,6 +17,7 @@ class ConfigClient {
     this.appId = String(appId);
     this.intervalSec = intervalSec;
     this.settings = null;
+    this.features = null; // { tabs, modules, commandGroups } — product scope from the service
     this._timer = null;
     this._listeners = new Set();
     this._usage = new Map(); // command name -> count, flushed to the dashboard
@@ -27,6 +28,7 @@ class ConfigClient {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${this.botKey}` } });
     if (!res.ok) throw new Error(`config fetch failed: ${res.status}`);
     const data = await res.json();
+    if (data.features && typeof data.features === 'object') this.features = data.features;
     return data.settings;
   }
 

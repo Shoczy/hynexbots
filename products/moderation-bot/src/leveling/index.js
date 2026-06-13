@@ -23,6 +23,22 @@ function levelInfo(totalXp) {
 
 const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
+/**
+ * XP multiplier for a member from their roles (e.g. boosters earn 2×).
+ * The most generous matching multiplier wins, so the rule is predictable.
+ */
+function multiplierFor(member, lv) {
+  const matches = (lv.multipliers || [])
+    .filter((m) => m.roleId && member.roles.cache.has(m.roleId))
+    .map((m) => Number(m.multiplier) || 1);
+  return matches.length ? Math.max(1, ...matches) : 1;
+}
+
+/** Does this member currently earn XP at all (no-XP roles respected)? */
+function blockedByRole(member, lv) {
+  return (lv.noXpRoleIds || []).some((id) => member.roles.cache.has(id));
+}
+
 async function applyRewards(member, level, lv) {
   const rewards = (lv.rewards || []).filter((r) => r.roleId && r.level <= level).sort((a, b) => a.level - b.level);
   if (!rewards.length) return;
@@ -35,24 +51,49 @@ async function applyRewards(member, level, lv) {
   }
 }
 
-async function announce(message, member, level, lv) {
+/**
+ * Announce a level-up. Posts to the configured channel, falling back to
+ * `fallbackChannel` (the channel they leveled up in) when none is set. Voice
+ * level-ups pass no fallback, so they only announce when a channel is configured.
+ */
+async function announce(guild, member, level, lv, fallbackChannel) {
   const lu = lv.levelUp || {};
   if (lu.enabled === false) return;
   const text = String(lu.message || 'GG {user}, you reached level {level}! 🎉')
     .replaceAll('{user}', `<@${member.id}>`)
     .replaceAll('{level}', String(level))
-    .replaceAll('{server}', message.guild.name);
-  const channel = lu.channelId ? await message.client.channels.fetch(lu.channelId).catch(() => null) : message.channel;
+    .replaceAll('{server}', guild.name);
+  const channel = lu.channelId ? await guild.client.channels.fetch(lu.channelId).catch(() => null) : fallbackChannel;
   if (channel?.isTextBased?.()) await channel.send({ content: text, allowedMentions: { users: [member.id] } }).catch(() => {});
 }
 
-/** Award XP for a message (cooldown + no-XP roles respected). Non-blocking. */
+/**
+ * Add XP to a member and handle a level-up (rewards + announcement). Shared by
+ * the message and voice earners. `stampMsg` updates the message cooldown clock;
+ * voice rewards leave it untouched so the two earners don't starve each other.
+ */
+async function award(member, amount, lv, { now = Date.now(), stampMsg = false, fallbackChannel = null } = {}) {
+  if (amount <= 0) return false;
+  const before = levelInfo(store.getXp(member.guild.id, member.id).xp).level;
+  const total = stampMsg
+    ? store.addXp(member.guild.id, member.id, amount, now)
+    : store.addVoiceXp(member.guild.id, member.id, amount);
+  const after = levelInfo(total).level;
+  if (after <= before) return false;
+  await applyRewards(member, after, lv);
+  await announce(member.guild, member, after, lv, fallbackChannel);
+  return true;
+}
+
+/** Award XP for a message (cooldown + no-XP roles/channels respected). Non-blocking. */
 async function handleMessage(message) {
   if (!cfg('modules.leveling', false)) return;
   const member = message.member;
-  if (!member) return;
+  if (!member || member.user.bot) return;
   const lv = cfg('leveling', {});
-  if ((lv.noXpRoleIds || []).some((id) => member.roles.cache.has(id))) return;
+  if (blockedByRole(member, lv)) return;
+  const noXpChannels = lv.noXpChannelIds || [];
+  if (noXpChannels.includes(message.channelId) || (message.channel.parentId && noXpChannels.includes(message.channel.parentId))) return;
 
   const now = Date.now();
   const entry = store.getXp(message.guild.id, member.id);
@@ -61,13 +102,8 @@ async function handleMessage(message) {
   const xpCfg = lv.xpPerMessage || { min: 15, max: 25 };
   const min = Math.max(0, xpCfg.min | 0);
   const max = Math.max(min, xpCfg.max | 0);
-  const before = levelInfo(entry.xp).level;
-  const total = store.addXp(message.guild.id, member.id, rand(min, max), now);
-  const after = levelInfo(total).level;
-  if (after > before) {
-    await applyRewards(member, after, lv);
-    await announce(message, member, after, lv);
-  }
+  const gained = Math.round(rand(min, max) * multiplierFor(member, lv));
+  await award(member, gained, lv, { now, stampMsg: true, fallbackChannel: message.channel });
 }
 
-module.exports = { handleMessage, levelInfo, xpForNext };
+module.exports = { handleMessage, levelInfo, xpForNext, multiplierFor, blockedByRole, award };
