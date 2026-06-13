@@ -1,11 +1,11 @@
 'use strict';
 
-const { Events, ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder } = require('discord.js');
+const { Events, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const config = require('../config');
 const store = require('../store');
-const { V2, text, sep } = require('../lib/components');
+const { V2, text, sep, container } = require('../lib/components');
 
-/** The channel the "Ticket öffnen" button links to (live config → env → payment panel). */
+/** The channel the "Open a Ticket" button links to (live config → env → payment panel). */
 function ticketChannelId() {
   const w = store.getWelcome();
   return w.ticketChannelId || config.welcome.ticketChannelId || config.paymentPanel.ticketChannelId || null;
@@ -13,38 +13,35 @@ function ticketChannelId() {
 
 /**
  * Build the welcome message payload (Components V2) for a member. Reused by the
- * join event and by `/welcome test`. Uses a coloured accent bar (unlike the
- * shop's neutral containers) to make the greeting pop.
+ * join event and by `/welcome test`.
  */
 function buildWelcome(member) {
-  const box = new ContainerBuilder().setAccentColor(config.brand.color);
-
-  box.addTextDisplayComponents(text(`## 👋 Willkommen auf ${member.guild.name}, ${member}!`));
-  box.addTextDisplayComponents(
+  const children = [
+    text(`## 👋 Welcome to ${member.guild.name}, ${member}!`),
     text(
-      `Schön, dass du da bist! **${config.brand.name}** ist dein Shop für premium, fertige Discord-Bots.\n\n` +
-        '🛒 Stöber durch unser Sortiment und **öffne ein Ticket**, um zu bestellen, Fragen zu stellen oder einen individuellen Bot anzufragen. Unser Team antwortet schnell.',
+      `Thanks for joining **${config.brand.name}** — your shop for premium, ready-made Discord bots.\n\n` +
+        '🛒 Browse our lineup and **open a ticket** to place an order, ask a question, or request a custom build. Our team replies fast.',
     ),
-  );
+  ];
 
   const ticketId = ticketChannelId();
   if (ticketId) {
-    box.addSeparatorComponents(sep());
-    box.addActionRowComponents(
+    children.push(sep());
+    children.push(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setStyle(ButtonStyle.Link)
-          .setLabel('Ticket öffnen')
+          .setLabel('Open a Ticket')
           .setEmoji('🎫')
           .setURL(`https://discord.com/channels/${member.guild.id}/${ticketId}`),
       ),
     );
   }
 
-  box.addSeparatorComponents(sep());
-  box.addTextDisplayComponents(text(`-# Du bist Mitglied **#${member.guild.memberCount}** • willkommen an Bord!`));
+  children.push(sep());
+  children.push(text(`-# You're member **#${member.guild.memberCount}** • ${config.brand.tagline}`));
 
-  return { flags: V2, components: [box], allowedMentions: { users: [member.id] } };
+  return { flags: V2, components: [container(config.brand.color, children)], allowedMentions: { users: [member.id] } };
 }
 
 module.exports = {
