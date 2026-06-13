@@ -394,6 +394,7 @@ function sanitizeFivem(f, def) {
       enabled: Boolean(i.chatBridge?.enabled),
       channelId: snowflake(i.chatBridge?.channelId),
     },
+    admin: { enabled: Boolean(i.admin?.enabled) },
   };
 }
 

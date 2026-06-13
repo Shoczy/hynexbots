@@ -168,6 +168,7 @@ export type FiveMSettings = {
   playtime: { enabled: boolean };
   stats: { enabled: boolean };
   chatBridge: { enabled: boolean; channelId: string };
+  admin: { enabled: boolean };
 };
 
 // Leveling-bot tailored settings.
@@ -268,6 +269,7 @@ export function defaultFiveM(): FiveMSettings {
     playtime: { enabled: false },
     stats: { enabled: false },
     chatBridge: { enabled: false, channelId: '' },
+    admin: { enabled: false },
   };
 }
 
@@ -366,7 +368,7 @@ export const COMMAND_GROUPS: { module: string; label: string; commands: string[]
   { module: 'verification', label: 'Verification', commands: ['verify-panel'] },
   { module: 'reactionroles', label: 'Reaction Roles', commands: ['roles-panel'] },
   { module: 'leveling', label: 'Leveling', commands: ['rank', 'levels', 'setxp'] },
-  { module: 'fivem', label: 'FiveM', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top', 'serverstats'] },
+  { module: 'fivem', label: 'FiveM', commands: ['status', 'players', 'whitelist', 'restart', 'playtime', 'playtime-top', 'serverstats', 'fivem-admin'] },
   { module: 'utility', label: 'Utility', commands: ['help', 'ping', 'serverinfo', 'userinfo', 'avatar'] },
 ];
 

@@ -267,6 +267,8 @@ function fivemDefaults() {
     // Two-way chat bridge between in-game chat and a Discord channel (needs the
     // in-game resource + the intake server configured).
     chatBridge: { enabled: false, channelId: '' },
+    // In-game admin actions (kick/ban from Discord) — needs the hynex_admin resource.
+    admin: { enabled: false },
   };
 }
 

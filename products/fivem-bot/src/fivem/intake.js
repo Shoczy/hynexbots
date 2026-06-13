@@ -6,6 +6,7 @@ const { fivem } = require('../lib/state');
 const { v2, COLORS } = require('../lib/embeds');
 const store = require('../lib/store');
 const chatBridge = require('./chatBridge');
+const admin = require('./admin');
 
 /**
  * Optional HTTP intake the customer's FiveM server talks to. Two endpoints,
@@ -110,6 +111,29 @@ function handle(req, res) {
     if (!chatBridge.enabled()) return json(res, 200, { ok: true, messages: [] });
     const since = url.searchParams.get('since') || 0;
     return json(res, 200, { ok: true, now: Date.now(), messages: chatBridge.pending(since) });
+  }
+
+  // Admin actions: the resource drains pending kicks/bans to execute in-game.
+  if (req.method === 'GET' && url.pathname === '/admin/pending') {
+    if (!fivem().admin?.enabled) return json(res, 200, { ok: true, actions: [] });
+    return json(res, 200, { ok: true, actions: admin.drainPending() });
+  }
+
+  // Connect-time ban check (by any of the player's identifiers).
+  if (req.method === 'GET' && url.pathname === '/admin/banned') {
+    const identifier = url.searchParams.get('identifier') || '';
+    const hit = store.isBanned(identifier);
+    return json(res, 200, { ok: true, banned: Boolean(hit), reason: hit?.reason || '' });
+  }
+
+  // The resource reports identifiers of a player it just banned, so the bot
+  // persists the ban and enforces it on future connects.
+  if (req.method === 'POST' && url.pathname === '/admin/banned') {
+    return readBody(req).then((body) => {
+      const ids = Array.isArray(body.identifiers) ? body.identifiers : [];
+      for (const id of ids) store.addBan(id, { reason: body.reason, bannedBy: body.by, name: body.name });
+      return json(res, 200, { ok: true, stored: ids.length });
+    });
   }
 
   return json(res, 404, { ok: false, error: 'not_found' });

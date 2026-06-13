@@ -252,6 +252,18 @@ export function FiveMEditor({
         </Row>
 
         <Row
+          label="In-game admin actions"
+          hint="Kick/ban players on the server from Discord with /fivem-admin. Requires the Hynex in-game resource (provided)."
+          checked={value.admin.enabled}
+          onChange={(v) => set('admin', { enabled: v })}
+        >
+          <p className="text-xs text-mist-muted">
+            Staff use <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">/fivem-admin kick|ban|unban|bans</code>. Drop the{' '}
+            <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">hynex_admin</code> resource on your server (same intake URL + secret as the chat bridge) — setup is in its README.
+          </p>
+        </Row>
+
+        <Row
           label="In-game ↔ Discord chat bridge"
           hint="Relays chat both ways between your server and a Discord channel. Requires the Hynex in-game resource (provided)."
           checked={value.chatBridge.enabled}

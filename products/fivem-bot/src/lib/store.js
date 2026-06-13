@@ -63,6 +63,35 @@ function addSample(count, maxc, ts = Date.now()) {
 }
 const samplesSince = (since) => db.prepare('SELECT ts, count, maxc FROM playercounts WHERE ts >= ? ORDER BY ts ASC').all(since);
 
+// In-game bans, keyed by identifier — enforced by the resource on connect.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fivem_bans (
+    identifier TEXT PRIMARY KEY,
+    reason     TEXT NOT NULL DEFAULT '',
+    banned_by  TEXT NOT NULL DEFAULT '',
+    name       TEXT NOT NULL DEFAULT '',
+    banned_at  INTEGER NOT NULL
+  );
+`);
+
+const normId = (s) => String(s || '').trim().toLowerCase();
+function addBan(identifier, { reason = '', bannedBy = '', name = '' } = {}) {
+  const id = normId(identifier);
+  if (!id) return false;
+  db.prepare(
+    `INSERT INTO fivem_bans (identifier, reason, banned_by, name, banned_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(identifier) DO UPDATE SET reason = excluded.reason, banned_by = excluded.banned_by, name = excluded.name, banned_at = excluded.banned_at`,
+  ).run(id, String(reason).slice(0, 500), String(bannedBy).slice(0, 64), String(name).slice(0, 100), Date.now());
+  return true;
+}
+const isBanned = (identifier) => {
+  const id = normId(identifier);
+  return id ? db.prepare('SELECT reason FROM fivem_bans WHERE identifier = ?').get(id) || null : null;
+};
+const removeBan = (identifier) => Number(db.prepare('DELETE FROM fivem_bans WHERE identifier = ?').run(normId(identifier)).changes || 0);
+const listBans = (limit = 50) =>
+  db.prepare('SELECT identifier, reason, name, banned_at FROM fivem_bans ORDER BY banned_at DESC LIMIT ?').all(Math.min(Math.max(1, limit | 0), 200));
+
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 /** Add `seconds` of playtime to an identifier and refresh its display name. */
@@ -140,4 +169,8 @@ module.exports = {
   findPlaytime,
   addSample,
   samplesSince,
+  addBan,
+  isBanned,
+  removeBan,
+  listBans,
 };
