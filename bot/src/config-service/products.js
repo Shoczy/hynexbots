@@ -52,9 +52,9 @@ const TEMPLATES = {
   // verification gate + anti-nuke + welcome/auto-roles (edited in the Messages
   // tab). Only security-relevant modules — no reaction roles or leveling.
   moderation: {
-    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'messages', 'commands'],
-    modules: ['moderation', 'verification', 'antinuke', 'welcome'],
-    commandGroups: ['moderation', 'verification', 'utility'],
+    tabs: ['basics', 'modules', 'moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'messages', 'commands'],
+    modules: ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'welcome'],
+    commandGroups: ['moderation', 'verification', 'reactionroles', 'leveling', 'utility'],
   },
   // The FiveM bot: live server status, role whitelist, in-game reports and
   // scheduled restart announcements, plus welcome onboarding.

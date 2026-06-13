@@ -58,7 +58,44 @@ db.exec(`
     star_message_id TEXT NOT NULL,
     count           INTEGER NOT NULL DEFAULT 0
   );
+
+  -- Leveling: total XP per member (level is derived from XP).
+  CREATE TABLE IF NOT EXISTS levels (
+    guild_id TEXT NOT NULL,
+    user_id  TEXT NOT NULL,
+    xp       INTEGER NOT NULL DEFAULT 0,
+    last_msg INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (guild_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_levels_guild_xp ON levels (guild_id, xp DESC);
 `);
+
+const getXp = (guildId, userId) =>
+  db.prepare('SELECT xp, last_msg FROM levels WHERE guild_id = ? AND user_id = ?').get(String(guildId), String(userId)) || { xp: 0, last_msg: 0 };
+
+/** Add XP (and stamp last_msg for the cooldown). Returns the new total. */
+function addXp(guildId, userId, amount, now) {
+  db.prepare(
+    `INSERT INTO levels (guild_id, user_id, xp, last_msg) VALUES (?, ?, ?, ?)
+     ON CONFLICT(guild_id, user_id) DO UPDATE SET xp = levels.xp + excluded.xp, last_msg = excluded.last_msg`,
+  ).run(String(guildId), String(userId), Math.max(0, amount | 0), now);
+  return getXp(guildId, userId).xp;
+}
+
+function setXp(guildId, userId, xp) {
+  db.prepare(
+    `INSERT INTO levels (guild_id, user_id, xp, last_msg) VALUES (?, ?, ?, 0)
+     ON CONFLICT(guild_id, user_id) DO UPDATE SET xp = excluded.xp`,
+  ).run(String(guildId), String(userId), Math.max(0, xp | 0));
+}
+
+const topLevels = (guildId, limit = 10) =>
+  db.prepare('SELECT user_id, xp FROM levels WHERE guild_id = ? ORDER BY xp DESC LIMIT ?').all(String(guildId), Math.min(Math.max(1, limit | 0), 25));
+
+const rankOf = (guildId, userId) => {
+  const { xp } = getXp(guildId, userId);
+  return Number(db.prepare('SELECT COUNT(*) AS n FROM levels WHERE guild_id = ? AND xp > ?').get(String(guildId), xp).n || 0) + 1;
+};
 
 const getStar = (messageId) => db.prepare('SELECT star_message_id, count FROM starboard WHERE message_id = ?').get(String(messageId)) || null;
 const setStar = (messageId, starMessageId, count) =>
@@ -151,4 +188,9 @@ module.exports = {
   getStar,
   setStar,
   deleteStar,
+  getXp,
+  addXp,
+  setXp,
+  topLevels,
+  rankOf,
 };

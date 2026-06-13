@@ -5,6 +5,7 @@ const { authorize, DENY_MESSAGE } = require('../lib/perms');
 const { err } = require('../lib/embeds');
 const { VERIFY_BUTTON_ID, handleVerifyButton } = require('../verification');
 const appeal = require('../appeal');
+const reactionroles = require('../reactionroles');
 
 module.exports = {
   name: Events.InteractionCreate,
@@ -13,6 +14,7 @@ module.exports = {
     if (interaction.isButton()) {
       try {
         if (interaction.customId === VERIFY_BUTTON_ID) await handleVerifyButton(interaction);
+        else if (interaction.customId.startsWith(reactionroles.RR_PREFIX)) await reactionroles.handleButton(interaction);
         else if (interaction.customId.startsWith(appeal.APPEAL_PREFIX)) await appeal.handleAppealButton(interaction);
         else if (interaction.customId.startsWith(appeal.DECISION_PREFIX)) await appeal.handleAppealDecision(interaction);
       } catch (e) {

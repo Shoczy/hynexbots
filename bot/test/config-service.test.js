@@ -119,20 +119,20 @@ test('moderation product is now a multi-module guardian', () => {
   assert.equal(saved.modules.fivem, false, 'fivem stays out of scope');
 });
 
-test('security bot bundles only security-relevant modules', () => {
+test('security bot bundles its guardian + community modules, not fivem', () => {
   const APP7 = '100000000000000007';
   store.registerBot({ appId: APP7, name: 'Guardian2', type: 'moderation', ownerId: OWNER, withKey: false });
   const f = resolveFeatures(store.getBot(APP7));
-  for (const m of ['moderation', 'verification', 'antinuke', 'welcome']) {
+  for (const m of ['moderation', 'verification', 'antinuke', 'reactionroles', 'leveling', 'welcome']) {
     assert.ok(f.modules.includes(m), `bundles ${m}`);
   }
-  // Reaction roles + leveling are NOT part of the security scope.
-  assert.ok(!f.modules.includes('reactionroles'), 'no reaction roles');
-  assert.ok(!f.modules.includes('leveling'), 'no leveling');
-  const saved = sanitizeSettings({ modules: { antinuke: true, reactionroles: true, leveling: true } }, f);
+  // FiveM stays out of the security scope.
+  assert.ok(!f.modules.includes('fivem'), 'no fivem');
+  const saved = sanitizeSettings({ modules: { antinuke: true, reactionroles: true, leveling: true, fivem: true } }, f);
   assert.equal(saved.modules.antinuke, true);
-  assert.equal(saved.modules.reactionroles, false, 'reaction roles forced off (out of scope)');
-  assert.equal(saved.modules.leveling, false, 'leveling forced off (out of scope)');
+  assert.equal(saved.modules.reactionroles, true, 'reaction roles now in scope');
+  assert.equal(saved.modules.leveling, true, 'leveling now in scope');
+  assert.equal(saved.modules.fivem, false, 'fivem forced off (out of scope)');
 });
 
 test('sanitizeReactionRoles drops roles without an id/label and caps panels', () => {

@@ -6,6 +6,7 @@ const { trackMessage } = require('../autoslowmode');
 const { handlePrefix } = require('../prefix');
 const { handleAutoresponders } = require('../autoresponder');
 const modmail = require('../modmail');
+const leveling = require('../leveling');
 
 module.exports = {
   name: Events.MessageCreate,
@@ -35,6 +36,8 @@ module.exports = {
     try {
       // Watch channel rate for auto-slowmode (non-blocking, counts every message).
       trackMessage(message).catch(() => {});
+      // Award leveling XP (non-blocking, no-ops unless the module is on).
+      leveling.handleMessage(message).catch(() => {});
       // Auto-mod first — if it removed the message, don't run it as a command.
       const acted = await handleMessage(message);
       if (acted) return;
