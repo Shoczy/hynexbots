@@ -241,6 +241,17 @@ export function FiveMEditor({
         </Row>
 
         <Row
+          label="Player stats & history"
+          hint="Records the player count every few minutes so /serverstats can show peaks (24h / 7d), the average and a 24-hour trend graph."
+          checked={value.stats.enabled}
+          onChange={(v) => set('stats', { enabled: v })}
+        >
+          <p className="text-xs text-mist-muted">
+            Members use <code className="rounded bg-ink-800 px-1.5 py-0.5 font-mono text-[11px]">/serverstats</code> to see the live count, peaks and a 24h sparkline. No in-game setup needed.
+          </p>
+        </Row>
+
+        <Row
           label="In-game ↔ Discord chat bridge"
           hint="Relays chat both ways between your server and a Discord channel. Requires the Hynex in-game resource (provided)."
           checked={value.chatBridge.enabled}

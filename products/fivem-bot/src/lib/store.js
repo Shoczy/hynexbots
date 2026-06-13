@@ -46,6 +46,23 @@ db.exec(`
   );
 `);
 
+// Player-count samples over time (for /serverstats history + peaks).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS playercounts (
+    ts    INTEGER PRIMARY KEY,
+    count INTEGER NOT NULL,
+    maxc  INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
+const RETAIN_MS = 7 * 86_400_000;
+/** Record a player-count sample and prune anything older than 7 days. */
+function addSample(count, maxc, ts = Date.now()) {
+  db.prepare('INSERT OR REPLACE INTO playercounts (ts, count, maxc) VALUES (?, ?, ?)').run(ts, Math.max(0, count | 0), Math.max(0, maxc | 0));
+  db.prepare('DELETE FROM playercounts WHERE ts < ?').run(ts - RETAIN_MS);
+}
+const samplesSince = (since) => db.prepare('SELECT ts, count, maxc FROM playercounts WHERE ts >= ? ORDER BY ts ASC').all(since);
+
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 /** Add `seconds` of playtime to an identifier and refresh its display name. */
@@ -121,4 +138,6 @@ module.exports = {
   addPlaytime,
   topPlaytime,
   findPlaytime,
+  addSample,
+  samplesSince,
 };

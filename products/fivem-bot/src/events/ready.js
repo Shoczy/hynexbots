@@ -11,6 +11,7 @@ const intake = require('../fivem/intake');
 const monitor = require('../fivem/monitor');
 const playtime = require('../fivem/playtime');
 const application = require('../fivem/application');
+const history = require('../fivem/history');
 const announcements = require('../announcements');
 
 /** Run a dashboard-dispatched action (see config-service DISPATCH_ACTIONS). */
@@ -88,6 +89,7 @@ module.exports = {
     intake.start(client);
     monitor.start(client);
     playtime.start();
+    history.start();
     announcements.start(client);
 
     // Execute actions the customer triggers from the dashboard (post status,
