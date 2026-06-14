@@ -16,17 +16,20 @@ function ticketChannelId() {
  * join event and by `/welcome test`.
  */
 function buildWelcome(member) {
+  const lineup = config.catalog.map((c) => `${c.webEmoji} **${c.label}** · ${c.price}`).join('\n');
+
   const children = [
-    text(`## 👋 Welcome to ${member.guild.name}, ${member}!`),
+    text(`## 👋 Welcome to ${member.guild.name}`),
     text(
-      `Thanks for joining **${config.brand.name}** — your shop for premium, ready-made Discord bots.\n\n` +
-        '🛒 Browse our lineup and **open a ticket** to place an order, ask a question, or request a custom build. Our team replies fast.',
+      `Hey ${member}, great to have you here. **${config.brand.name}** is your shop for premium, ready-made Discord bots — set up and delivered fast.`,
     ),
+    sep(),
+    text(`**Our lineup**\n${lineup}`),
   ];
 
   const ticketId = ticketChannelId();
   if (ticketId) {
-    children.push(sep());
+    children.push(text('Ready to order or got a question? **Open a ticket** and our team replies fast.'));
     children.push(
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -39,7 +42,7 @@ function buildWelcome(member) {
   }
 
   children.push(sep());
-  children.push(text(`-# You're member **#${member.guild.memberCount}** • ${config.brand.tagline}`));
+  children.push(text(`-# Member #${member.guild.memberCount} • ${config.brand.tagline}`));
 
   return { flags: V2, components: [container(config.brand.color, children)], allowedMentions: { users: [member.id] } };
 }

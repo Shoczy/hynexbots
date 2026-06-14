@@ -14,19 +14,13 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((s) =>
       s
-        .setName('channel')
-        .setDescription('Choose the channel where the welcome message is posted (turns it on).')
-        .addChannelOption((o) => o.setName('channel').setDescription('Welcome channel').addChannelTypes(...TEXTY).setRequired(true)),
-    )
-    .addSubcommand((s) =>
-      s
-        .setName('ticket')
-        .setDescription('Choose the channel the "Open a Ticket" button links to.')
-        .addChannelOption((o) => o.setName('channel').setDescription('Ticket / storefront channel').addChannelTypes(...TEXTY).setRequired(true)),
+        .setName('setup')
+        .setDescription('Set the welcome channel (and optional ticket button) and turn it on.')
+        .addChannelOption((o) => o.setName('channel').setDescription('Where welcome messages are posted').addChannelTypes(...TEXTY).setRequired(true))
+        .addChannelOption((o) => o.setName('ticket').setDescription('Channel the "Open a Ticket" button links to (optional)').addChannelTypes(...TEXTY).setRequired(false)),
     )
     .addSubcommand((s) => s.setName('test').setDescription('Preview the welcome message here.'))
-    .addSubcommand((s) => s.setName('off').setDescription('Turn the welcome message off.'))
-    .addSubcommand((s) => s.setName('status').setDescription('Show the current welcome settings.')),
+    .addSubcommand((s) => s.setName('off').setDescription('Turn the welcome message off.')),
 
   async execute(interaction) {
     if (!interaction.member?.permissions?.has(PermissionFlagsBits.ManageGuild)) {
@@ -34,16 +28,22 @@ module.exports = {
     }
     const sub = interaction.options.getSubcommand();
 
-    if (sub === 'channel') {
+    if (sub === 'setup') {
       const channel = interaction.options.getChannel('channel');
-      store.setWelcome({ enabled: true, channelId: channel.id });
-      return interaction.reply({ content: `✅ Welcome messages are **on** and will post in ${channel}. Use \`/welcome test\` to preview.`, flags: MessageFlags.Ephemeral });
-    }
+      const ticket = interaction.options.getChannel('ticket');
+      const patch = { enabled: true, channelId: channel.id };
+      if (ticket) patch.ticketChannelId = ticket.id;
+      store.setWelcome(patch);
 
-    if (sub === 'ticket') {
-      const channel = interaction.options.getChannel('channel');
-      store.setWelcome({ ticketChannelId: channel.id });
-      return interaction.reply({ content: `✅ The "Open a Ticket" button now links to ${channel}.`, flags: MessageFlags.Ephemeral });
+      const w = store.getWelcome();
+      const ticketId = w.ticketChannelId || config.welcome.ticketChannelId || config.paymentPanel.ticketChannelId;
+      const lines = [
+        '✅ Welcome messages are **on**.',
+        `**Channel:** ${channel}`,
+        `**Ticket button:** ${ticketId ? `<#${ticketId}>` : '_not set_'}`,
+        'Preview it with `/welcome test`.',
+      ];
+      return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
     }
 
     if (sub === 'off') {
@@ -51,18 +51,7 @@ module.exports = {
       return interaction.reply({ content: '🚫 Welcome messages are now **off**.', flags: MessageFlags.Ephemeral });
     }
 
-    if (sub === 'test') {
-      return interaction.reply(buildWelcome(interaction.member));
-    }
-
-    // status
-    const w = store.getWelcome();
-    const ticketId = w.ticketChannelId || config.welcome.ticketChannelId || config.paymentPanel.ticketChannelId;
-    const lines = [
-      `**Status:** ${w.enabled ? '🟢 On' : '🔴 Off'}`,
-      `**Channel:** ${w.channelId ? `<#${w.channelId}>` : '_not set (system channel)_'}`,
-      `**Ticket button:** ${ticketId ? `<#${ticketId}>` : '_not set_'}`,
-    ];
-    return interaction.reply({ content: lines.join('\n'), flags: MessageFlags.Ephemeral });
+    // test
+    return interaction.reply(buildWelcome(interaction.member));
   },
 };
